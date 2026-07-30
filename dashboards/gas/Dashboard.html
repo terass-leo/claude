@@ -64,6 +64,9 @@ h1{font-family:var(--f-disp);font-size:clamp(26px,3.6vw,38px);line-height:1.26;m
 button{font-family:var(--f-data);font-size:11.5px;letter-spacing:.06em;padding:7px 14px;
   background:var(--panel);color:var(--ink-2);border:1px solid var(--hair);border-radius:2px;cursor:pointer}
 button:hover{border-color:var(--bronze);color:var(--bronze)}
+.btn{display:inline-block;font-family:var(--f-data);font-size:12px;letter-spacing:.06em;
+  padding:9px 16px;border:1px solid var(--bronze);color:var(--bronze);text-decoration:none;border-radius:2px}
+.btn:hover{background:var(--bronze);color:var(--paper)}
 
 section{display:flex;flex-direction:column;gap:20px}
 .s-head{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--hair);padding-top:15px}
@@ -179,6 +182,24 @@ footer{border-top:1px solid var(--hair);padding-top:22px;font-size:12.5px;color:
   }
 
   // ---------- helpers ----------
+  if (D.setupError) {
+    document.getElementById('root').innerHTML =
+      '<header class="mast"><div class="eyebrow">Setup required</div>' +
+      '<h1>まだデータがありません</h1></header>' +
+      '<div class="err"><b>' + esc(D.setupError) + '</b></div>' +
+      '<section>' +
+      '<div class="s-head first"><h2>直し方</h2>' +
+      '<p class="s-note">スプレッドシート「' + esc(D.sheetName || '') + '」を開き、メニュー ' +
+      '<b>ピカイチ採用 › 初期セットアップ（最初に1回）</b> を実行してください。' +
+      '決定者マスタ・月次目標・選考中一覧が作られ、このページに数字が出ます。<br>' +
+      'すでに実行済みでこの画面が出る場合は、メニュー <b>ピカイチ採用 › 設定を診断</b> で ' +
+      'どのシートを読めていないか確認してください。</p></div>' +
+      (D.sheetUrl ? '<div><a class="btn" href="' + esc(D.sheetUrl) + '" target="_blank" rel="noopener">' +
+        'スプレッドシートを開く</a></div>' : '') +
+      '</section>';
+    return;
+  }
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];

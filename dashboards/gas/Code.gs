@@ -97,7 +97,16 @@ function doGet() {
 
 function renderDashboard_() {
   var t = HtmlService.createTemplateFromFile('Dashboard');
-  t.payload = JSON.stringify(buildSnapshot());
+  try {
+    t.payload = JSON.stringify(buildSnapshot());
+  } catch (e) {
+    // 初期セットアップ前や設定違いのときに生のエラー画面を見せない
+    t.payload = JSON.stringify({
+      setupError: String((e && e.message) || e),
+      sheetUrl: SpreadsheetApp.getActive().getUrl(),
+      sheetName: SpreadsheetApp.getActive().getName()
+    });
+  }
   return t.evaluate();
 }
 
