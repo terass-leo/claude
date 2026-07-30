@@ -32,6 +32,10 @@ var CONFIG = {
   pipelinePhaseHeader: '採用フェーズ',
   pipelineNameHeader: '候補者指名',
 
+  // ファネルの C4 ブロックが見つからない場合に読む、シンプルな月次目標シート。
+  // 新規スプレッドシートでは最初からこちらを使えばよい。
+  targetSheet: '月次目標',
+
   // 集計を書き出すシート（Looker Studio 等から参照する用）
   summarySheet: '集計_ピカイチ',
 
@@ -47,6 +51,9 @@ var TIERS = [
   { name: 'その他',     wb: 1.2, slot: 's1' }
 ];
 
+// 月次目標シートの行ラベル（＋「目標」「実績」）
+var TARGET_ROWS = { info: '情報数', itv: '面接数', offer: '内定数', sign: '締結数' };
+
 var MASTER_HEADERS = [
   '氏名', '区分', '締結日', '参画予定日', '応募チャネル', '出身企業',
   'リファラル元', '売上期待値(万円)', '年収保証(万円)', '固定給計(万円)',
@@ -61,9 +68,14 @@ function onOpen() {
     .createMenu('ピカイチ採用')
     .addItem('ダッシュボードを開く', 'showDashboard')
     .addSeparator()
+    .addItem('初期セットアップ（最初に1回）', 'bootstrap')
     .addItem('集計シートを更新', 'writeSummarySheet')
-    .addItem('決定者マスタを作成 / 初期化', 'setupMasterSheet')
     .addItem('設定を診断', 'diagnose')
+    .addSeparator()
+    .addSubMenu(SpreadsheetApp.getUi().createMenu('シート操作')
+      .addItem('決定者マスタを作成 / 初期化', 'setupMasterSheet')
+      .addItem('決定者の初期データを投入', 'seedMasterSheet')
+      .addItem('月次目標シートを作成', 'createTargetSheet'))
     .addToUi();
 }
 
@@ -97,6 +109,11 @@ function buildSnapshot() {
   var live = decided.filter(function (d) { return d.counts; });
 
   var monthly = buildMonthly_(live, funnel);
+
+  // 締結の実績はマスタが唯一の正。シート側の値は参照しない
+  // （ここを一本化しないと、締結後辞退の扱いでファネルと HC がずれる）
+  monthly.forEach(function (m, i) { funnel.sign[i].actual = m.hc; });
+
   var totals  = buildTotals_(live, funnel, monthly);
   var mix     = buildMix_(live);
   var guarantee = buildGuarantee_(live);
@@ -173,24 +190,55 @@ function readMaster_() {
  * 「目標」「実績」ラベル行から列ペアを検出するので、列位置がずれても追従する。
  */
 function readFunnel_() {
-  var empty = { info: blankPairs_(), itv: blankPairs_(), offer: blankPairs_(), sign: blankPairs_(), found: false };
   var sh = SpreadsheetApp.getActive().getSheetByName(CONFIG.funnelSheet);
-  if (!sh) return empty;
+  if (sh) {
+    var values = sh.getDataRange().getValues();
+
+    // 「目標」「実績」が交互に並ぶラベル行を探す
+    var labelRow = -1, pairs = null;
+    for (var r = 0; r < Math.min(values.length, 40); r++) {
+      var p = detectPairs_(values[r]);
+      if (p.length >= 12) { labelRow = r; pairs = p.slice(0, 12); break; }
+    }
+    if (labelRow >= 0) {
+      var result = { found: true, source: CONFIG.funnelSheet };
+      Object.keys(CONFIG.funnelRows).forEach(function (key) {
+        result[key] = readMetricRow_(values, labelRow, pairs, CONFIG.funnelRows[key]);
+      });
+      return result;
+    }
+  }
+  // C4 ブロックが無ければシンプルな月次目標シートを読む
+  return readTargetSheet_();
+}
+
+/**
+ * 月次目標シート（指標 × 1〜12月）を読む。
+ * 行ラベルは「情報数 目標」「情報数 実績」のように 指標＋区分 で書く。
+ * 締結数の実績はマスタから算出するので入力不要。
+ */
+function readTargetSheet_() {
+  var empty = { info: blankPairs_(), itv: blankPairs_(), offer: blankPairs_(),
+                sign: blankPairs_(), found: false, source: null };
+  var sh = SpreadsheetApp.getActive().getSheetByName(CONFIG.targetSheet);
+  if (!sh || sh.getLastRow() < 2) return empty;
 
   var values = sh.getDataRange().getValues();
+  var result = { found: true, source: CONFIG.targetSheet };
 
-  // 「目標」「実績」が交互に並ぶラベル行を探す
-  var labelRow = -1, pairs = null;
-  for (var r = 0; r < Math.min(values.length, 40); r++) {
-    var p = detectPairs_(values[r]);
-    if (p.length >= 12) { labelRow = r; pairs = p.slice(0, 12); break; }
-  }
-  if (labelRow < 0) return empty;
-
-  var result = { found: true };
-  Object.keys(CONFIG.funnelRows).forEach(function (key) {
-    var label = CONFIG.funnelRows[key];
-    result[key] = readMetricRow_(values, labelRow, pairs, label);
+  Object.keys(TARGET_ROWS).forEach(function (key) {
+    var name = TARGET_ROWS[key];
+    result[key] = blankPairs_();
+    ['目標', '実績'].forEach(function (kind) {
+      var want = normalize_(name + kind);
+      for (var r = 1; r < values.length; r++) {
+        if (normalize_(values[r][0]) !== want) continue;
+        for (var m = 0; m < 12; m++) {
+          result[key][m][kind === '目標' ? 'target' : 'actual'] = num_(values[r][m + 1]);
+        }
+        break;
+      }
+    });
   });
   return result;
 }
@@ -220,7 +268,7 @@ function readMetricRow_(values, labelRow, pairs, label) {
 /** 選考中一覧をフェーズ別に集計 */
 function readPipeline_() {
   var sh = SpreadsheetApp.getActive().getSheetByName(CONFIG.pipelineSheet);
-  if (!sh) return { found: false, phases: [] };
+  if (!sh) return { found: false, phases: [], active: 0, pending: 0, total: 0 };
 
   var values = sh.getDataRange().getValues();
   var headRow = -1, phaseCol = -1, nameCol = -1;
@@ -232,7 +280,7 @@ function readPipeline_() {
     }
     if (headRow >= 0) break;
   }
-  if (headRow < 0) return { found: false, phases: [] };
+  if (headRow < 0) return { found: false, phases: [], active: 0, pending: 0, total: 0 };
 
   var buckets = {};
   for (var r2 = headRow + 1; r2 < values.length; r2++) {
@@ -499,14 +547,138 @@ function writeSummarySheet() {
 }
 
 // ============================================================
+// 初期データ — 2026年7月30日時点の決定者。bootstrap / seedMasterSheet で投入する。
+// 締結日は Salesforce の ContractConclusionDate、金額は万円。
+// ============================================================
+var SEED_DECIDED = [
+  ['小田 俊介', 'ピカイチ',   '2026/03/05', '2026/05/01', 'リストマッチ', 'REDS',                 '大河原さん',     3300, 1500,   0,   0, '締結', ''],
+  ['藤岡 将也', 'ピカイチ',   '2026/03/07', '2026/05/01', 'リストマッチ', '住友不動産販売',       '鈴木英徳さん',   2400, 1400, 120,   0, '締結', '固定給 30万×4か月'],
+  ['吉川 航二', 'ピカイチ',   '2026/04/01', '2026/09/01', 'リストマッチ', '住友不動産販売',       '大河原さん',     3000, 1500,   0,   0, '締結', ''],
+  ['藤崎 常博', '準ピカイチ', '2026/05/06', '2026/10/01', '直接応募',     '住友不動産販売',       '',               2400, 1700,   0,   0, '締結', ''],
+  ['田邊 柚樹', 'ピカイチ',   '2026/05/23', '2026/08/01', 'リストマッチ', '住友不動産販売',       '谷津さん',       2400, 2000,   0,   0, '締結', ''],
+  ['塚越 翔太', 'ピカイチ',   '2026/05/27', '2026/09/01', 'リファラル',   '住友不動産販売',       '重道さん',       2400, 1500,   0,   0, '締結', ''],
+  ['常光 孝博', '準ピカイチ', '2026/05/27', '2026/09/01', 'リストマッチ', '東宝ハウス',           '福田さん',       2400, 1200,   0,   0, '締結', ''],
+  ['鳥越 篤',   'その他',     '2026/05/30', '2026/09/01', 'リストマッチ', '住友不動産販売',       '岡部さん',       2100,    0, 150,   0, '締結', '固定給 25万×6か月'],
+  ['鈴木 碧',   '準ピカイチ', '2026/06/23', '',           'リストマッチ', '三菱UFJ不動産販売',    '谷津さん',          0,    0,   0,   0, '辞退（締結後）', '配偶者の反対。次回接点 2026/10/14'],
+  ['小畑 慧伍', 'ピカイチ',   '2026/06/30', '2026/09/01', 'リストマッチ', '住友不動産販売',       '谷津さん',       2400, 1800,   0,   0, '締結', ''],
+  ['中川 雅史', 'ピカイチ',   '2026/07/01', '2026/08/01', 'リストマッチ', '住友不動産販売',       '鈴木さん',       3000, 2000,   0, 200, '締結', 'サインアップ 200万'],
+  ['西野 大智', '準ピカイチ', '2026/07/02', '2026/09/01', 'リストマッチ', '住友不動産販売',       '谷津さん',       2400, 1100,   0,   0, '締結', ''],
+  ['岡田 雅美', 'ピカイチ',   '2026/07/07', '2026/08/01', 'リストマッチ', '住友不動産販売',       '',               4200,    0,   0,   0, '締結', '保証なし'],
+  ['池田 悠真', '準ピカイチ', '2026/07/15', '2026/08/01', 'リストマッチ', '住友不動産販売',       '谷津さん',       2400,    0, 120,   0, '締結', '固定給 30万×4か月'],
+  ['吉村 剣郎', 'その他',     '2026/07/14', '2026/09/01', 'リストマッチ', '住友不動産販売',       '谷津さん',       2100, 1000,   0,   0, '締結', ''],
+  ['安彦 詠太', 'ピカイチ',   '2026/07/27', '2026/09/01', 'リストマッチ', '住友不動産販売',       '鈴木英徳さん',      0, 1900,   0,   0, '締結', '売上期待値が未登録']
+];
+
+// 月次目標（FY2026）。既存のファネルシートを読めない場合に月次目標シートへ書き込む。
+var SEED_TARGETS = {
+  '情報数 目標': [1, 2, 3, 2, 2, 3, 4, 2, 2, 4, 4, 5],
+  '情報数 実績': [1, 5, 6, 5, 4, 3, 2, 0, 0, 0, 0, 0],
+  '面接数 目標': [1, 1, 2, 2, 1, 1, 3, 2, 1, 3, 2, 2],
+  '面接数 実績': [2, 4, 4, 0, 2, 6, 1, 0, 0, 0, 0, 0],
+  '内定数 目標': [0, 2, 1, 2, 1, 0, 3, 2, 1, 3, 2, 2],
+  '内定数 実績': [2, 4, 4, 0, 2, 6, 1, 0, 0, 0, 0, 0],
+  '締結数 目標': [0, 0, 2, 1, 1, 0, 3, 2, 1, 2, 1, 1],
+  '締結数 実績': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+};
+
+/**
+ * 貼り付け直後の1回だけ実行する。
+ * 決定者マスタ → 初期データ → 月次目標シート → 診断 をまとめて行う。
+ */
+function bootstrap() {
+  var ui = SpreadsheetApp.getUi();
+  var res = ui.alert('ピカイチ採用ボードの初期セットアップ',
+    '次を行います。\n\n' +
+    '・「' + CONFIG.masterSheet + '」を作成し、2026年7月30日時点の決定者16行を投入\n' +
+    '・「' + CONFIG.funnelSheet + '」が無い場合は「' + CONFIG.targetSheet + '」を作成して月次目標を投入\n' +
+    '・設定を診断\n\n既にあるデータは消しません。よろしいですか？',
+    ui.ButtonSet.OK_CANCEL);
+  if (res !== ui.Button.OK) return;
+
+  setupMasterSheet(true);
+  var added = seedMasterSheet(true);
+
+  var hasFunnel = !!SpreadsheetApp.getActive().getSheetByName(CONFIG.funnelSheet);
+  if (!hasFunnel) createTargetSheet(true);
+
+  SpreadsheetApp.getActive().toast(
+    '決定者 ' + added + '行を投入しました。' + (hasFunnel ? '' : '月次目標シートも作成しました。'),
+    'セットアップ完了', 8);
+  diagnose();
+}
+
+/** 決定者マスタに初期データを投入する。氏名が既にある行はスキップするので何度実行してもよい */
+function seedMasterSheet(silent) {
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(CONFIG.masterSheet);
+  if (!sh) { setupMasterSheet(true); sh = ss.getSheetByName(CONFIG.masterSheet); }
+
+  var existing = {};
+  if (sh.getLastRow() > 1) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().forEach(function (r) {
+      var n = String(r[0]).trim();
+      if (n) existing[n] = true;
+    });
+  }
+
+  var rows = SEED_DECIDED.filter(function (r) { return !existing[r[0]]; })
+    .map(function (r) {
+      var c = r.slice();
+      c[2] = c[2] ? new Date(c[2]) : '';
+      c[3] = c[3] ? new Date(c[3]) : '';
+      return c;
+    });
+
+  if (rows.length) {
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, MASTER_HEADERS.length).setValues(rows);
+    sh.getRange(2, 3, sh.getLastRow() - 1, 2).setNumberFormat('yyyy/mm/dd');
+    sh.autoResizeColumns(1, MASTER_HEADERS.length);
+  }
+  if (!silent) {
+    ss.toast(rows.length ? rows.length + '行を追加しました。' : '追加する行はありませんでした（すべて登録済み）。',
+             'ピカイチ採用', 5);
+  }
+  return rows.length;
+}
+
+/** 月次目標シートを作る。既存のファネルシートを読める場合は不要 */
+function createTargetSheet(silent) {
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(CONFIG.targetSheet);
+  if (!sh) sh = ss.insertSheet(CONFIG.targetSheet);
+
+  var header = ['指標'];
+  for (var m = 1; m <= 12; m++) header.push(m + '月');
+  var rows = [header];
+  Object.keys(SEED_TARGETS).forEach(function (k) {
+    rows.push([k].concat(SEED_TARGETS[k]));
+  });
+  rows.push([]);
+  rows.push(['※ 締結数の実績は決定者マスタから自動算出するため、ここに入力する必要はありません。']);
+
+  sh.getRange(1, 1, rows.length, header.length).setValues(
+    rows.map(function (r) {
+      var c = r.slice();
+      while (c.length < header.length) c.push('');
+      return c;
+    }));
+  sh.getRange(1, 1, 1, header.length).setFontWeight('bold');
+  sh.setFrozenRows(1);
+  sh.setFrozenColumns(1);
+  sh.autoResizeColumns(1, header.length);
+
+  if (!silent) ss.toast('月次目標シートを作成しました。', 'ピカイチ採用', 5);
+}
+
+// ============================================================
 // 決定者マスタの作成
 // ============================================================
-function setupMasterSheet() {
+function setupMasterSheet(silent) {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActive();
   var sh = ss.getSheetByName(CONFIG.masterSheet);
 
-  if (sh && sh.getLastRow() > 1) {
+  if (!silent && sh && sh.getLastRow() > 1) {
     var res = ui.alert('「' + CONFIG.masterSheet + '」には既にデータがあります。ヘッダーと入力規則だけ再設定しますか？（データは消しません）',
       ui.ButtonSet.YES_NO);
     if (res !== ui.Button.YES) return;
@@ -530,7 +702,7 @@ function setupMasterSheet() {
   sh.getRange(2, 8, Math.max(sh.getMaxRows() - 1, 200), 4).setNumberFormat('#,##0');
   sh.autoResizeColumns(1, MASTER_HEADERS.length);
 
-  ss.toast('決定者マスタを整えました。1候補者1行で入力してください。', 'ピカイチ採用', 6);
+  if (!silent) ss.toast('決定者マスタを整えました。1候補者1行で入力してください。', 'ピカイチ採用', 6);
 }
 
 /** 設定が正しくシートを掴めているか確認する */
@@ -546,7 +718,9 @@ function diagnose() {
 
   try {
     var f = readFunnel_();
-    lines.push(f.found ? '○ ファネルの目標／実績列ペアを検出' : '× ファネルの「目標」「実績」ラベル行が見つかりません');
+    lines.push(f.found ? '○ ファネル読み取り元：' + f.source
+                       : '× ファネルを読めません（' + CONFIG.funnelSheet + ' の「目標」「実績」ラベル行も、' +
+                         CONFIG.targetSheet + ' も見つかりません）');
     if (f.found) {
       lines.push('   締結 目標 = [' + f.sign.map(function (x) { return x.target; }).join(', ') + ']');
       lines.push('   締結 実績 = [' + f.sign.map(function (x) { return x.actual; }).join(', ') + ']');
