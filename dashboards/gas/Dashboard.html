@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<base target="_top">
+<title>ピカイチ採用 コンディションボード</title>
+<style>
+:root{
+  color-scheme: light;
+  --paper:#FAF7F1; --panel:#FFFDF9; --hair:#E2DCD1; --hair-2:#EFEAE0;
+  --ink:#151A22; --ink-2:#4A4740; --muted:#7A756B;
+  --bronze:#8A6217; --bronze-soft:#F0E4C8;
+  --s1:#63AEAA; --s2:#2E908C; --s3:#157370; --s4:#0A4F4D;
+  --data:#157370;
+  --good:#1F7A4D; --warn:#B25E12; --crit:#A32B2B;
+  --good-bg:#E6F0E9; --warn-bg:#F7E9DA; --crit-bg:#F5E3E1;
+  --track:#EDE8DE; --now:#F3EEE2;
+  --f-disp:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+  --f-body:"Hiragino Sans","Yu Gothic",YuGothic,"Noto Sans JP",system-ui,-apple-system,sans-serif;
+  --f-data:ui-monospace,"SF Mono",SFMono-Regular,Menlo,"Roboto Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --paper:#141A23; --panel:#19202B; --hair:#2A303B; --hair-2:#232A35;
+    --ink:#F2EFE8; --ink-2:#B9B3A7; --muted:#8B8578;
+    --bronze:#D3A64A; --bronze-soft:#3A3020;
+    --s1:#9BDCD7; --s2:#6BC3BE; --s3:#3FA29D; --s4:#23807C;
+    --data:#3FA29D;
+    --good:#4FB380; --warn:#DE9440; --crit:#E57373;
+    --good-bg:#1B2A22; --warn-bg:#2E2317; --crit-bg:#2E1D1D;
+    --track:#232A35; --now:#1F2731;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#141A23; --panel:#19202B; --hair:#2A303B; --hair-2:#232A35;
+  --ink:#F2EFE8; --ink-2:#B9B3A7; --muted:#8B8578;
+  --bronze:#D3A64A; --bronze-soft:#3A3020;
+  --s1:#9BDCD7; --s2:#6BC3BE; --s3:#3FA29D; --s4:#23807C;
+  --data:#3FA29D;
+  --good:#4FB380; --warn:#DE9440; --crit:#E57373;
+  --good-bg:#1B2A22; --warn-bg:#2E2317; --crit-bg:#2E1D1D;
+  --track:#232A35; --now:#1F2731;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;
+  line-height:1.75;-webkit-font-smoothing:antialiased;font-feature-settings:"palt" 1}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 28px 80px;display:flex;flex-direction:column;gap:46px}
+@media(max-width:720px){.wrap{padding:26px 16px 56px;gap:34px}}
+
+.mast{display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--hair);padding-bottom:22px}
+.eyebrow{font-family:var(--f-data);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--bronze);display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--bronze);flex:none}
+h1{font-family:var(--f-disp);font-size:clamp(26px,3.6vw,38px);line-height:1.26;margin:0;
+  font-weight:600;text-wrap:balance}
+.mast-meta{display:flex;flex-wrap:wrap;gap:6px 24px;font-family:var(--f-data);font-size:12px;
+  color:var(--muted);font-variant-numeric:tabular-nums}
+.mast-meta b{color:var(--ink-2);font-weight:500}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+button{font-family:var(--f-data);font-size:11.5px;letter-spacing:.06em;padding:7px 14px;
+  background:var(--panel);color:var(--ink-2);border:1px solid var(--hair);border-radius:2px;cursor:pointer}
+button:hover{border-color:var(--bronze);color:var(--bronze)}
+
+section{display:flex;flex-direction:column;gap:20px}
+.s-head{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--hair);padding-top:15px}
+.s-head.first{border-top:none;padding-top:0}
+.s-head .eyebrow::before{width:18px}
+h2{font-family:var(--f-disp);font-size:22px;line-height:1.35;margin:0;font-weight:600}
+.s-note{color:var(--muted);font-size:13px;max-width:74ch;margin:0;line-height:1.7}
+.s-note b{color:var(--ink-2)}
+.panel{background:var(--panel);border:1px solid var(--hair);padding:24px 24px 20px}
+.panel.tight{padding:18px}
+.scroll{overflow-x:auto}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:860px){.two{grid-template-columns:1fr}}
+
+.kv{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair)}
+@media(max-width:860px){.kv{grid-template-columns:repeat(2,1fr)}}
+.kv>div{background:var(--panel);padding:18px;display:flex;flex-direction:column;gap:5px}
+.kv dt{font-family:var(--f-data);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.kv dd{margin:0;font-family:var(--f-data);font-size:28px;font-variant-numeric:tabular-nums;font-weight:500}
+.kv dd .u{font-size:12px;color:var(--muted);margin-left:2px}
+.kv .note{font-size:11.5px;color:var(--muted);line-height:1.55}
+.kv .note .ok{color:var(--good);font-weight:600}
+.kv .note .ng{color:var(--warn);font-weight:600}
+
+.alerts{display:flex;flex-direction:column;gap:1px;background:var(--hair);border:1px solid var(--hair)}
+.alert{background:var(--panel);padding:16px 20px;display:grid;grid-template-columns:74px 1fr;gap:16px;align-items:start}
+@media(max-width:640px){.alert{grid-template-columns:1fr;gap:8px}}
+.alert-t{font-weight:600;font-size:14.5px;margin:0 0 3px}
+.alert p{margin:0;color:var(--ink-2);font-size:13px;line-height:1.75}
+.pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--f-data);font-size:10.5px;
+  letter-spacing:.08em;padding:2.5px 8px;border-radius:2px;font-weight:600}
+.pill.crit{background:var(--crit-bg);color:var(--crit)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.ok{background:var(--good-bg);color:var(--good)}
+
+.chart{width:100%;height:auto;display:block}
+.grid{stroke:var(--hair-2);stroke-width:1}
+.base{stroke:var(--hair);stroke-width:1}
+.div{stroke:var(--bronze);stroke-width:1;stroke-dasharray:2 4;opacity:.7}
+.now{fill:var(--now)}
+.ax{font-family:var(--f-data);font-size:10.5px;fill:var(--muted);font-variant-numeric:tabular-nums}
+.ax-r{text-anchor:end}.mid{text-anchor:middle}
+.sm{font-size:9.5px;letter-spacing:.08em}
+.em{fill:var(--ink-2);font-weight:600}
+.val{font-family:var(--f-data);font-size:12px;fill:var(--ink);text-anchor:middle;
+  font-variant-numeric:tabular-nums;font-weight:600}
+.bar-t{fill:none;stroke:var(--bronze);stroke-width:1.25;stroke-dasharray:3 2.5}
+.bar-a{fill:var(--data)}
+.zero{fill:var(--muted);opacity:.5}
+.seg.s1{fill:var(--s1)}.seg.s2{fill:var(--s2)}.seg.s3{fill:var(--s3)}.seg.s4{fill:var(--s4)}
+.trk{fill:var(--track)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-family:var(--f-data);font-size:11px;
+  color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.key{width:13px;height:11px;flex:none;border-radius:2px}
+.key.t{border:1.25px dashed var(--bronze);background:none}
+.key.a{background:var(--data)}
+.key.s1{background:var(--s1)}.key.s2{background:var(--s2)}
+.key.s3{background:var(--s3)}.key.s4{background:var(--s4)}
+.fn-l{font-family:var(--f-body);font-size:14px;fill:var(--ink);font-weight:600}
+.fn-n{font-family:var(--f-data);font-size:11px;fill:var(--bronze);font-weight:600}
+.fn-v{font-family:var(--f-data);font-size:19px;fill:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+.fn-u{font-family:var(--f-body);font-size:10.5px;fill:var(--muted);font-weight:400}
+.fn-r{font-family:var(--f-data);font-size:12.5px;fill:var(--ink-2);font-variant-numeric:tabular-nums;font-weight:600}
+.fn-rl{font-family:var(--f-body);font-size:10.5px;fill:var(--muted)}
+.fn-a{stroke:var(--hair);stroke-width:1}
+.thr{stroke:var(--bronze);stroke-width:1.25}
+.thr-l{font-family:var(--f-data);font-size:10px;fill:var(--bronze);letter-spacing:.05em}
+.over-zone{fill:var(--crit);opacity:.055}
+.g-n{font-family:var(--f-body);font-size:12.5px;fill:var(--ink)}
+.g-wb{font-family:var(--f-data);font-size:10px;fill:var(--muted)}
+.g-b{fill:var(--data)}.g-b.over{fill:var(--crit)}
+.g-v{font-family:var(--f-data);font-size:12px;fill:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+.g-v.over{fill:var(--crit)}
+.g-flag{font-family:var(--f-data);font-size:10px;fill:var(--crit);letter-spacing:.06em;font-weight:600}
+.g-d{font-family:var(--f-data);font-size:11px;fill:var(--ink-2);font-variant-numeric:tabular-nums}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--hair-2);vertical-align:top}
+thead th{font-family:var(--f-data);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:500;border-bottom:1px solid var(--hair);white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--hair-2)}
+td.n,th.n{font-family:var(--f-data);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+caption{caption-side:top;text-align:left;font-size:12px;color:var(--muted);padding-bottom:9px}
+table.mtx{font-size:12.5px}
+table.mtx th,table.mtx td{padding:8px 9px;white-space:nowrap}
+table.mtx .tot{border-left:1px solid var(--hair);background:var(--hair-2)}
+table.mtx td.ng{color:var(--warn);font-weight:600}
+.ph{font-family:var(--f-data);font-size:11px;color:var(--bronze);letter-spacing:.06em}
+.names{color:var(--ink-2);font-size:12.5px;line-height:1.7}
+.err{background:var(--crit-bg);color:var(--crit);border:1px solid var(--crit);padding:18px 20px;
+  font-size:13.5px;line-height:1.8}
+footer{border-top:1px solid var(--hair);padding-top:22px;font-size:12.5px;color:var(--muted);line-height:1.8}
+:focus-visible{outline:2px solid var(--bronze);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<script type="application/json" id="payload"><?!= payload ?></script>
+<div class="wrap" id="root"></div>
+
+<script>
+(function () {
+  var D;
+  try { D = JSON.parse(document.getElementById('payload').textContent); }
+  catch (e) {
+    document.getElementById('root').innerHTML =
+      '<div class="err">データの読み込みに失敗しました：' + esc(e.message) + '</div>';
+    return;
+  }
+
+  // ---------- helpers ----------
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function n1(v) { return v === null || v === undefined ? '—' : Number(v).toFixed(1); }
+  function n2(v) { return v === null || v === undefined ? '—' : Number(v).toFixed(2); }
+  function comma(v) { return (Number(v) || 0).toLocaleString('ja-JP'); }
+  function niceMax(v, step) {
+    step = step || 5;
+    return Math.max(step, Math.ceil(v / step) * step);
+  }
+  /** 軸目盛を切りのよい間隔にする */
+  function niceStep(max) {
+    var candidates = [1, 2, 5, 10, 20, 25, 50, 100];
+    for (var i = 0; i < candidates.length; i++) {
+      if (max / candidates[i] <= 4) return candidates[i];
+    }
+    return Math.ceil(max / 4);
+  }
+  /** 底辺に接地した、上端だけ角丸の矩形パス */
+  function rtop(x, y, w, h, r) {
+    if (h <= 0) return '';
+    r = Math.min(r === undefined ? 4 : r, h, w / 2);
+    return 'M' + x + ',' + (y + h) + ' L' + x + ',' + (y + r) +
+           ' Q' + x + ',' + y + ' ' + (x + r) + ',' + y +
+           ' L' + (x + w - r) + ',' + y + ' Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) +
+           ' L' + (x + w) + ',' + (y + h) + ' Z';
+  }
+  function svg(vb, body) {
+    return '<svg viewBox="' + vb + '" class="chart" role="img">' + body + '</svg>';
+  }
+
+  // ---------- chart: 月次 HC / WB（積み上げ） ----------
+  function chartHcWb() {
+    var L = 66, R = 952, T = 30, B = 214, gap = 2, bw = 22;
+    var slot = (R - L) / 12, off = (slot - (bw * 2 + gap)) / 2;
+    var peak = Math.max.apply(null, D.monthly.map(function (m) { return Math.max(m.wb, m.wbTarget); }));
+    var ymax = niceMax(peak, 5), unit = (B - T) / ymax, step = niceStep(ymax);
+    var s = '';
+    for (var v = 0; v <= ymax; v += step) {
+      var y = B - v * unit;
+      s += '<line x1="' + L + '" y1="' + y + '" x2="' + R + '" y2="' + y + '" class="grid"/>' +
+           '<text x="' + (L - 10) + '" y="' + (y + 4) + '" class="ax ax-r">' + v + '</text>';
+    }
+    s += '<text x="' + (L - 10) + '" y="' + (T - 12) + '" class="ax ax-r sm">WB</text>';
+    s += '<line x1="' + L + '" y1="' + B + '" x2="' + R + '" y2="' + B + '" class="base"/>';
+    var xd = L + slot * 6;
+    s += '<line x1="' + xd + '" y1="' + (T - 14) + '" x2="' + xd + '" y2="' + (B + 8) + '" class="div"/>' +
+         '<text x="' + (xd - 8) + '" y="' + (T - 18) + '" class="ax ax-r sm">上期</text>' +
+         '<text x="' + (xd + 8) + '" y="' + (T - 18) + '" class="ax sm">下期</text>';
+
+    D.monthly.forEach(function (m, i) {
+      var x = L + slot * i + off, xa = x + bw + gap;
+      if (i === D.currentMonthIndex) {
+        s += '<rect x="' + (L + slot * i) + '" y="' + (T - 8) + '" width="' + slot +
+             '" height="' + (B - T + 8) + '" class="now"/>';
+      }
+      if (m.wbTarget > 0) {
+        var ht = m.wbTarget * unit;
+        s += '<path d="' + rtop(x, B - ht, bw, ht) + '" class="bar-t"><title>' + m.month +
+             '月 参考目標 WB ' + n1(m.wbTarget) + '（HC目標' + m.hcTarget + '×' + D.config.wbBenchmark + '）</title></path>';
+      }
+      var y = B;
+      D.tiers.forEach(function (t) {
+        var cnt = m.byTier[t.name] || 0;
+        if (!cnt) return;
+        var seg = t.wb * cnt, h = Math.max(seg * unit - gap, 2);
+        s += '<rect x="' + xa + '" y="' + (y - h) + '" width="' + bw + '" height="' + h +
+             '" rx="2" class="seg ' + t.slot + '"><title>' + m.month + '月 ' + esc(t.name) + ' ' + cnt +
+             '名 = WB ' + n1(seg) + '</title></rect>';
+        y -= h + gap;
+      });
+      if (m.wb > 0) s += '<text x="' + (xa + bw / 2) + '" y="' + (y - 6) + '" class="val">' + n1(m.wb) + '</text>';
+      else s += '<circle cx="' + (xa + bw / 2) + '" cy="' + (B - 2) + '" r="1.6" class="zero"/>';
+      s += '<text x="' + (x + bw / 2) + '" y="' + (B + 15) + '" class="ax mid">' + m.hcTarget + '</text>' +
+           '<text x="' + (xa + bw / 2) + '" y="' + (B + 15) + '" class="ax mid em">' + m.hc + '</text>' +
+           '<text x="' + (L + slot * i + slot / 2) + '" y="' + (B + 34) + '" class="ax mid">' + m.month + '月</text>';
+    });
+    s += '<text x="' + (L - 12) + '" y="' + (B + 15) + '" class="ax ax-r sm">HC 目標／実績</text>';
+    return svg('0 0 980 268', s);
+  }
+
+  // ---------- chart: 月次 目標 vs 実績（単一指標） ----------
+  function chartMonthly(pairs, label) {
+    var L = 66, R = 952, T = 18, B = 198, gap = 2, bw = 22;
+    var slot = (R - L) / 12, off = (slot - (bw * 2 + gap)) / 2;
+    var peak = Math.max.apply(null, pairs.map(function (p) { return Math.max(p.target, p.actual); }));
+    var ymax = Math.max(2, Math.ceil(peak / 2) * 2), unit = (B - T) / ymax, step = niceStep(ymax);
+    var s = '';
+    for (var v = 0; v <= ymax; v += step) {
+      var y = B - v * unit;
+      s += '<line x1="' + L + '" y1="' + y + '" x2="' + R + '" y2="' + y + '" class="grid"/>' +
+           '<text x="' + (L - 10) + '" y="' + (y + 4) + '" class="ax ax-r">' + v + '</text>';
+    }
+    s += '<line x1="' + L + '" y1="' + B + '" x2="' + R + '" y2="' + B + '" class="base"/>';
+    var xd = L + slot * 6;
+    s += '<line x1="' + xd + '" y1="' + (T - 8) + '" x2="' + xd + '" y2="' + (B + 8) + '" class="div"/>' +
+         '<text x="' + (xd - 8) + '" y="' + (T - 12) + '" class="ax ax-r sm">上期</text>' +
+         '<text x="' + (xd + 8) + '" y="' + (T - 12) + '" class="ax sm">下期</text>';
+    pairs.forEach(function (p, i) {
+      var x = L + slot * i + off, xa = x + bw + gap;
+      if (i === D.currentMonthIndex) {
+        s += '<rect x="' + (L + slot * i) + '" y="' + (T - 6) + '" width="' + slot +
+             '" height="' + (B - T + 6) + '" class="now"/>';
+      }
+      if (p.target > 0) {
+        var ht = p.target * unit;
+        s += '<path d="' + rtop(x, B - ht, bw, ht) + '" class="bar-t"><title>' + (i + 1) +
+             '月 目標 ' + p.target + '</title></path>';
+      }
+      if (p.actual > 0) {
+        var ha = p.actual * unit;
+        s += '<path d="' + rtop(xa, B - ha, bw, ha) + '" class="bar-a"><title>' + (i + 1) +
+             '月 実績 ' + p.actual + '</title></path>' +
+             '<text x="' + (xa + bw / 2) + '" y="' + (B - ha - 7) + '" class="val">' + p.actual + '</text>';
+      } else {
+        s += '<circle cx="' + (xa + bw / 2) + '" cy="' + (B - 2) + '" r="1.6" class="zero"/>';
+      }
+      s += '<text x="' + (x + bw / 2) + '" y="' + (B + 15) + '" class="ax mid">' + p.target + '</text>' +
+           '<text x="' + (xa + bw / 2) + '" y="' + (B + 15) + '" class="ax mid em">' + p.actual + '</text>' +
+           '<text x="' + (L + slot * i + slot / 2) + '" y="' + (B + 34) + '" class="ax mid">' + (i + 1) + '月</text>';
+    });
+    s += '<text x="' + (L - 12) + '" y="' + (B + 15) + '" class="ax ax-r sm">目標／実績</text>';
+    return svg('0 0 980 244', s);
+  }
+
+  // ---------- chart: ファネル ----------
+  function chartFunnel(stages) {
+    var X0 = 196, W = 712, H = 38, G = 26, T = 14;
+    var top = stages[0].value || 1;
+    var s = '';
+    stages.forEach(function (st, i) {
+      var y = T + i * (H + G), w = W * st.value / top;
+      s += '<text x="0" y="' + (y + 16) + '" class="fn-n">' + (i + 1) + '</text>' +
+           '<text x="26" y="' + (y + 16) + '" class="fn-l">' + esc(st.label) + '</text>' +
+           '<rect x="' + X0 + '" y="' + y + '" width="' + W + '" height="' + H + '" class="trk"/>' +
+           '<rect x="' + X0 + '" y="' + y + '" width="' + Math.max(w, 2) + '" height="' + H +
+           '" rx="4" class="seg s' + (i + 1) + '"><title>' + esc(st.label) + ' ' + st.value + '</title></rect>' +
+           '<text x="' + (X0 + w + 12) + '" y="' + (y + H / 2 + 6) + '" class="fn-v">' + st.value + '</text>' +
+           '<text x="' + (X0 + w + 12 + (st.value > 9 ? 30 : 18)) + '" y="' + (y + H / 2 + 6) +
+           '" class="fn-u">' + esc(st.unit || '件') + '</text>';
+      if (i < stages.length - 1) {
+        var nv = stages[i + 1].value, r = st.value ? nv / st.value * 100 : 0;
+        s += '<line x1="' + (X0 + 16) + '" y1="' + (y + H + 5) + '" x2="' + (X0 + 16) +
+             '" y2="' + (y + H + G - 5) + '" class="fn-a"/>' +
+             '<text x="' + (X0 + 26) + '" y="' + (y + H + G / 2 + 4) + '" class="fn-r">' + n1(r) + '%</text>' +
+             '<text x="' + (X0 + 78) + '" y="' + (y + H + G / 2 + 4) + '" class="fn-rl">' +
+             esc(st.label) + '→' + esc(stages[i + 1].label) + '</text>';
+      }
+    });
+    return svg('0 0 980 ' + (T + stages.length * (H + G)), s);
+  }
+
+  // ---------- chart: 保証率 ----------
+  function chartGuarantee() {
+    var rows = D.guarantee.rows.filter(function (r) { return !r.unknown; });
+    if (!rows.length) return '<p class="s-note">売上期待値が登録された決定者がまだありません。</p>';
+    var X0 = 150, W = 560, H = 20, G = 10;
+    var cap = D.config.capRate * 100;
+    var mx = niceMax(Math.max.apply(null, rows.map(function (r) { return r.rate; }).concat([cap + 10])), 10);
+    var x66 = X0 + W * cap / mx;
+    var h = 20 + rows.length * (H + G) - G + 8;
+    var s = '<rect x="' + x66 + '" y="16" width="' + (X0 + W - x66) + '" height="' + (h - 16) + '" class="over-zone"/>' +
+            '<line x1="' + x66 + '" y1="8" x2="' + x66 + '" y2="' + h + '" class="thr"/>' +
+            '<text x="' + (x66 + 6) + '" y="8" class="thr-l">' + cap + '% 上限（売上期待値×' + cap + '%ルール）</text>' +
+            '<text x="' + (X0 + W + 150) + '" y="8" class="ax sm ax-r">コミット(万)</text>' +
+            '<text x="' + (X0 + W + 222) + '" y="8" class="ax sm ax-r">見込(万)</text>';
+    rows.forEach(function (r, i) {
+      var y = 20 + i * (H + G), w = Math.max(W * r.rate / mx, 2);
+      s += '<text x="0" y="' + (y + 15) + '" class="g-n">' + esc(r.name) + '</text>' +
+           '<text x="104" y="' + (y + 15) + '" class="g-wb">WB ' + r.wb + '</text>' +
+           '<rect x="' + X0 + '" y="' + y + '" width="' + W + '" height="' + H + '" class="trk"/>' +
+           '<rect x="' + X0 + '" y="' + y + '" width="' + w + '" height="' + H + '" rx="4" class="g-b' +
+           (r.over ? ' over' : '') + '"><title>' + esc(r.name) + ' コミット' + comma(r.commit) +
+           '万円 / 見込' + comma(r.expect) + '万円 = ' + n1(r.rate) + '%</title></rect>' +
+           '<text x="' + (X0 + w + 10) + '" y="' + (y + 15) + '" class="g-v' + (r.over ? ' over' : '') + '">' +
+           n1(r.rate) + '%</text>' +
+           (r.over ? '<text x="' + (X0 + w + 68) + '" y="' + (y + 15) + '" class="g-flag">▲ 超過</text>' : '') +
+           '<text x="' + (X0 + W + 150) + '" y="' + (y + 15) + '" class="g-d ax-r">' + comma(r.commit) + '</text>' +
+           '<text x="' + (X0 + W + 222) + '" y="' + (y + 15) + '" class="g-d ax-r">' + comma(r.expect) + '</text>';
+    });
+    return svg('0 0 980 ' + (h + 10), s);
+  }
+
+  // ---------- chart: 構成（横棒リスト） ----------
+  function chartMix(rows, unitLabel) {
+    if (!rows.length) return '';
+    var X0 = 182, W = 520, H = 28, G = 14;
+    var top = Math.max.apply(null, rows.map(function (r) { return r.count; })) || 1;
+    var s = '';
+    rows.forEach(function (r, i) {
+      var y = 14 + i * (H + G), w = Math.max(W * r.count / top, 2);
+      var slot = r.slot || 's' + Math.min(4, i + 1);
+      s += '<text x="0" y="' + (y + 19) + '" class="g-n">' + esc(r.key) + '</text>' +
+           '<rect x="' + X0 + '" y="' + y + '" width="' + W + '" height="' + H + '" class="trk"/>' +
+           '<rect x="' + X0 + '" y="' + y + '" width="' + w + '" height="' + H + '" rx="4" class="seg ' + slot +
+           '"><title>' + esc(r.key) + ' ' + r.count + unitLabel + '</title></rect>' +
+           '<text x="' + (X0 + w + 10) + '" y="' + (y + 19) + '" class="g-v">' + r.count + '</text>' +
+           '<text x="' + (X0 + W + 120) + '" y="' + (y + 19) + '" class="g-d ax-r">' + n1(r.share) + '%</text>';
+    });
+    s += '<text x="' + (X0 + W + 120) + '" y="8" class="ax sm ax-r">構成比</text>';
+    return svg('0 0 980 ' + (14 + rows.length * (H + G)), s);
+  }
+
+  // ---------- sections ----------
+  function head(eyebrow, title, note, first) {
+    return '<div class="s-head' + (first ? ' first' : '') + '">' +
+      (eyebrow ? '<div class="eyebrow">' + esc(eyebrow) + '</div>' : '') +
+      '<h2>' + esc(title) + '</h2>' +
+      (note ? '<p class="s-note">' + note + '</p>' : '') + '</div>';
+  }
+
+  function tile(label, value, unit, note) {
+    return '<div><dt>' + esc(label) + '</dt><dd>' + value +
+      (unit ? '<span class="u">' + esc(unit) + '</span>' : '') + '</dd>' +
+      (note ? '<div class="note">' + note + '</div>' : '') + '</div>';
+  }
+
+  var T = D.totals, out = [];
+
+  // masthead
+  out.push('<header class="mast">' +
+    '<div class="eyebrow">Terass Agent ／ 投資型採用</div>' +
+    '<h1>ピカイチ採用 コンディションボード</h1>' +
+    '<div class="mast-meta">' +
+      '<span>基準日 <b>' + esc(D.asOf) + '</b></span>' +
+      '<span>決定者 <b>' + T.hc + '名</b></span>' +
+      '<span>累計WB <b>' + n1(T.wb) + '</b></span>' +
+      '<span>データ元 <b>スプレッドシート（自動集計）</b></span>' +
+    '</div>' +
+    '<div class="toolbar">' +
+      '<button type="button" id="reload">最新の数字を読み込む</button>' +
+      '<button type="button" id="theme">表示テーマを切り替え</button>' +
+    '</div>' +
+  '</header>');
+
+  // 自動アラート
+  out.push('<section>' +
+    head('Alerts — 判定ルールによる自動抽出', 'いま出ている警戒サイン',
+      'しきい値はスクリプトの CONFIG と判定ルールで定義している。数字を更新すれば自動で再判定される。') +
+    '<div class="alerts">' + D.alerts.map(function (a) {
+      var lb = a.level === 'crit' ? '警戒' : a.level === 'warn' ? '注意' : '良好';
+      return '<div class="alert"><div><span class="pill ' + a.level + '">' + lb + '</span></div>' +
+        '<div><h3 class="alert-t">' + esc(a.title) + '</h3><p>' + esc(a.body) + '</p></div></div>';
+    }).join('') + '</div>' +
+  '</section>');
+
+  // ファーストビュー：HC / WB
+  out.push('<section>' +
+    head('Monthly decisions — HC / WB', '月次の決定状況',
+      'HC＝決定人数、WB＝ウエイトバック（' + D.tiers.map(function (t) { return esc(t.name) + t.wb; }).join('／') +
+      '）。<b>同じ人数を採っても WB が下がれば売上インパクトは目減りする。</b>') +
+    '<div class="kv">' +
+      tile('累計 HC', T.hc, '名',
+        '目標 ' + T.hcTarget + '名 ／ 達成率 <span class="' + (T.hcRate >= 100 ? 'ok' : 'ng') + '">' +
+        (T.hcRate === null ? '—' : T.hcRate + '%') + '</span>') +
+      tile('累計 WB', n1(T.wb), '',
+        '参考ベンチ ' + n1(T.wbTarget) + ' ／ 達成率 <span class="' + (T.wbRate >= 100 ? 'ok' : 'ng') + '">' +
+        (T.wbRate === null ? '—' : T.wbRate + '%') + '</span>') +
+      tile('平均 WB ／ 人', n2(T.avgWb), '',
+        'ピカイチ基準 ' + D.config.wbBenchmark + ' に対する水準') +
+      tile('直近3か月の平均WB', n2(T.recentAvgWb), '',
+        (T.recentAvgWb !== null && T.avgWb !== null && T.recentAvgWb < T.avgWb)
+          ? '<span class="ng">通期平均 ' + n2(T.avgWb) + ' を下回る</span>'
+          : '通期平均 ' + n2(T.avgWb) + ' と同水準以上') +
+    '</div>' +
+    '<div class="panel scroll">' + chartHcWb() +
+      '<div class="legend">' +
+        D.tiers.map(function (t) {
+          return '<span><i class="key ' + t.slot + '"></i>' + esc(t.name) + ' WB' + t.wb + '</span>';
+        }).join('') +
+        '<span><i class="key t"></i>参考目標 WB（HC目標×' + D.config.wbBenchmark + '）</span>' +
+        '<span>棒の高さ＝WB、下段の太字＝HC実績</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="panel tight scroll">' + monthlyTable() + '</div>' +
+  '</section>');
+
+  function monthlyTable() {
+    function row(label, get, cls, total) {
+      return '<tr><td>' + label + '</td>' + D.monthly.map(function (m) {
+        var v = get(m);
+        return '<td class="n' + (cls ? ' ' + cls(m) : '') + '">' + (v === null ? '—' : v) + '</td>';
+      }).join('') + '<td class="n tot">' + total + '</td></tr>';
+    }
+    var heads = D.monthly.map(function (m) { return '<th class="n">' + m.month + '月</th>'; }).join('');
+    return '<table class="mtx"><caption>月次内訳 ― 締結日ベース。ステータスが「辞退（締結後）」の行は HC・WB から除外</caption>' +
+      '<thead><tr><th>指標</th>' + heads + '<th class="n tot">累計</th></tr></thead><tbody>' +
+      row('HC 目標', function (m) { return m.hcTarget; }, null, T.hcTarget) +
+      row('<b>HC 実績</b>', function (m) { return m.hasActual ? '<b>' + m.hc + '</b>' : null; }, null, '<b>' + T.hc + '</b>') +
+      row('<b>WB 実績</b>', function (m) { return m.hasActual ? '<b>' + n1(m.wb) + '</b>' : null; }, null, '<b>' + n1(T.wb) + '</b>') +
+      row('平均 WB', function (m) { return m.avgWb === null ? null : n2(m.avgWb); },
+          function (m) { return (m.avgWb !== null && m.avgWb < D.config.wbBenchmark) ? 'ng' : ''; }, n2(T.avgWb)) +
+      row('参考目標 WB', function (m) { return n1(m.wbTarget); }, null, n1(T.wbTarget)) +
+      '</tbody></table>';
+  }
+
+  // ファネル
+  if (D.funnel.found) {
+    var f = D.funnel;
+    function tot(metric) { return f[metric].reduce(function (a, p) { return a + p.actual; }, 0); }
+    var stages = [
+      { label: '情報数', value: tot('info') },
+      { label: '面接数', value: tot('itv') },
+      { label: '内定数', value: tot('offer') },
+      { label: '締結数', value: T.hc, unit: '名' }
+    ];
+    out.push('<section>' +
+      head('Funnel — 年間累計', 'ファネル形状と歩留まり',
+        '情報・面接・内定はファネルシートの実績、締結は決定者マスタの実効値（締結後辞退を除く）。') +
+      '<div class="panel scroll">' + chartFunnel(stages) + '</div>' +
+      '<div class="kv">' +
+        tile('情報 → 面接', n1(stages[0].value ? stages[1].value / stages[0].value * 100 : 0), '%', '') +
+        tile('面接 → 内定', n1(stages[1].value ? stages[2].value / stages[1].value * 100 : 0), '%', '') +
+        tile('内定 → 締結', n1(stages[2].value ? stages[3].value / stages[2].value * 100 : 0), '%', '') +
+        tile('決定者出現率', n1(stages[0].value ? stages[3].value / stages[0].value * 100 : 0), '%',
+             '締結 ÷ 情報。ベンチマーク 50%') +
+      '</div>' +
+    '</section>');
+
+    var h = T.half;
+    out.push('<section>' +
+      head('Monthly — 目標 vs 実績', '入口（情報数）の月次推移',
+        h.label + 'の進捗 <b>' + n1(h.info.rate) + '%</b>（' + h.info.actual + '／' + h.info.target +
+        '件）に対し、時間進捗は <b>' + n1(h.elapsedRate) + '%</b>。網掛けは当月。') +
+      '<div class="panel scroll">' + chartMonthly(f.info, '情報数') +
+        '<div class="legend"><span><i class="key t"></i>目標</span><span><i class="key a"></i>実績</span></div></div>' +
+      head('', '結果（締結数）の月次推移',
+        h.label + 'の締結は <b>' + h.sign.actual + '／' + h.sign.target + '名</b>（' + n1(h.sign.rate) + '%）。') +
+      '<div class="panel scroll">' + chartMonthly(f.sign, '締結数') +
+        '<div class="legend"><span><i class="key t"></i>目標</span><span><i class="key a"></i>実績</span></div></div>' +
+    '</section>');
+  } else {
+    out.push('<section>' + head('Funnel', 'ファネル', '') +
+      '<div class="err">ファネルシートから月次の目標／実績を読み取れませんでした。' +
+      'スプレッドシートのメニュー「ピカイチ採用 → 設定を診断」で、CONFIG.funnelSheet と ' +
+      '「目標」「実績」ラベル行が検出できているか確認してください。</div></section>');
+  }
+
+  // 構成
+  out.push('<section>' +
+    head('Mix', '決定者の構成', '区分は売上インパクト、出身企業とチャネルは入口の集中度を示す。') +
+    '<div class="panel scroll">' + chartMix(D.mix.tiers, '名') +
+      '<div class="legend"><span>区分別の決定人数</span></div></div>' +
+    '<div class="two">' +
+      '<div class="panel tight scroll">' + mixTable('応募チャネル', D.mix.channels) + '</div>' +
+      '<div class="panel tight scroll">' + mixTable('出身企業', D.mix.origins) + '</div>' +
+    '</div>' +
+  '</section>');
+
+  function mixTable(title, rows) {
+    return '<table><caption>' + esc(title) + '</caption>' +
+      '<thead><tr><th>' + esc(title) + '</th><th class="n">人数</th><th class="n">構成比</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr><td>' + esc(r.key) + '</td><td class="n"><b>' + r.count + '</b></td><td class="n">' +
+          n1(r.share) + '%</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  // 投資規律
+  var g = D.guarantee;
+  out.push('<section>' +
+    head('Investment discipline', '投資規律 — ' + (D.config.capRate * 100) + '%ルールの遵守状況',
+      '保証率＝（年収保証＋固定給＋サインアップ）÷ 売上期待値。上限は売上期待値×' +
+      (D.config.capRate * 100) + '%。') +
+    '<div class="panel scroll">' + chartGuarantee() + '</div>' +
+    '<div class="kv">' +
+      tile('コミット総額', comma(g.commitTotal), '万円', '年換算') +
+      tile('ポートフォリオ保証率', n1(g.portfolioRate), '%',
+        g.headroom === null ? '' : '上限までの余枠 約' + comma(g.headroom) + '万円') +
+      tile((D.config.capRate * 100) + '% 超過', g.overCount, '名',
+        g.overNames.length ? esc(g.overNames.join('・')) : 'なし') +
+      tile('売上期待値 未登録', g.unknownNames.length, '名',
+        g.unknownNames.length ? '<span class="ng">' + esc(g.unknownNames.join('・')) + '</span>' : 'なし') +
+    '</div>' +
+  '</section>');
+
+  // 参画月
+  out.push('<section>' +
+    head('Onboarding load', '参画月の分布',
+      D.joins.peak ? '最大は <b>' + esc(D.joins.peak.label) + ' の ' + D.joins.peak.count + '名</b>。' : '') +
+    '<div class="panel tight scroll"><table>' +
+      '<thead><tr><th>参画月</th><th class="n">人数</th><th>対象者</th></tr></thead><tbody>' +
+      D.joins.rows.map(function (r) {
+        return '<tr><td class="ph">' + esc(r.label) + '</td><td class="n"><b>' + r.count +
+          '</b></td><td class="names">' + esc(r.names.join('／')) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+  '</section>');
+
+  // パイプライン
+  if (D.pipeline.found) {
+    out.push('<section>' +
+      head('Pipeline', '残パイプライン',
+        '選考が動いているのが <b>' + D.pipeline.active + '名</b>、ペンディングが <b>' +
+        D.pipeline.pending + '名</b>（締結済・辞退を除く）。') +
+      '<div class="panel tight scroll"><table>' +
+        '<thead><tr><th>採用フェーズ</th><th class="n">人数</th><th>候補者</th></tr></thead><tbody>' +
+        D.pipeline.phases.map(function (p) {
+          return '<tr><td class="ph">' + esc(p.phase) + '</td><td class="n"><b>' + p.count +
+            '</b></td><td class="names">' + esc(p.names.join('／')) + '</td></tr>';
+        }).join('') + '</tbody></table></div>' +
+    '</section>');
+  }
+
+  out.push('<footer>数字はすべてスプレッドシートから読み取った自動集計。' +
+    '決定者を1行追加して「最新の数字を読み込む」を押せば更新される。' +
+    'しきい値と判定ルールは Code.gs の CONFIG と buildAlerts_ で変更できる。</footer>');
+
+  document.getElementById('root').innerHTML = out.join('');
+
+  document.getElementById('reload').addEventListener('click', function () { location.reload(); });
+  document.getElementById('theme').addEventListener('click', function () {
+    var r = document.documentElement;
+    var dark = r.getAttribute('data-theme') === 'dark' ||
+      (!r.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    r.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+})();
+</script>
+</body>
+</html>

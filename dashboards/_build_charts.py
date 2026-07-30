@@ -49,6 +49,56 @@ def monthly(data, ymax, label, cur=6):
     s.append('</svg>')
     return '\n'.join(s)
 
+# ---- HC / WB 月次（ファーストビュー） ----
+HC_T=[0,0,2,1,1,0,3,2,1,2,1,1]
+TIERS=[(5.0,'POP','s4'),(3.0,'ピカイチ','s3'),(2.0,'準ピカイチ','s2'),(1.2,'その他','s1')]
+MONTIER={1:{},2:{},3:{3.0:2},4:{3.0:1},5:{3.0:2,2.0:2,1.2:1},6:{3.0:1},
+         7:{3.0:3,2.0:2,1.2:1},8:{},9:{},10:{},11:{},12:{}}
+
+def hcwb():
+    L,R,T,B = 66,952,30,214
+    W=R-L; slot=W/12; bw=22; gap=2; off=(slot-(bw*2+gap))/2
+    ymax=15.0; unit=(B-T)/ymax
+    s=[f'<svg viewBox="0 0 980 268" role="img" aria-label="月次の決定状況 HCとWB" class="chart">']
+    for v in (0,5,10,15):
+        y=B-v*unit
+        s.append(f'<line x1="{L}" y1="{y:.1f}" x2="{R}" y2="{y:.1f}" class="grid"/>')
+        s.append(f'<text x="{L-10}" y="{y+4:.1f}" class="ax ax-r">{v}</text>')
+    s.append(f'<text x="{L-10}" y="{T-12}" class="ax ax-r sm">WB</text>')
+    s.append(f'<line x1="{L}" y1="{B}" x2="{R}" y2="{B}" class="base"/>')
+    xd=L+slot*6
+    s.append(f'<line x1="{xd:.1f}" y1="{T-14}" x2="{xd:.1f}" y2="{B+8}" class="div"/>')
+    s.append(f'<text x="{xd-8:.1f}" y="{T-18}" class="ax ax-r sm">上期</text>')
+    s.append(f'<text x="{xd+8:.1f}" y="{T-18}" class="ax sm">下期</text>')
+    for i in range(12):
+        m=i+1; x=L+slot*i+off
+        if m==7:
+            s.append(f'<rect x="{L+slot*i:.1f}" y="{T-8}" width="{slot:.1f}" height="{B-T+8}" class="now"/>')
+        tw=HC_T[i]*3.0; ht=tw*unit
+        if tw>0:
+            s.append(f'<path d="{rtop(x,B-ht,bw,ht)}" class="bar-t"><title>{m}月 参考目標 WB {tw:.1f}（HC目標{HC_T[i]}×3.0）</title></path>')
+        xa=x+bw+gap
+        y=B; hc=0; wb=0.0
+        for val,name,cls in TIERS:
+            n=MONTIER[m].get(val,0)
+            if not n: continue
+            hc+=n; seg=val*n; wb+=seg
+            h=seg*unit-gap
+            if h<2: h=2
+            s.append(f'<rect x="{xa:.1f}" y="{y-h:.1f}" width="{bw}" height="{h:.1f}" rx="2" class="fn-b {cls}">'
+                     f'<title>{m}月 {name} {n}名 = WB {seg:.1f}</title></rect>')
+            y-=h+gap
+        if wb>0:
+            s.append(f'<text x="{xa+bw/2:.1f}" y="{y-6:.1f}" class="val">{wb:.1f}</text>')
+        else:
+            s.append(f'<circle cx="{xa+bw/2:.1f}" cy="{B-2}" r="1.6" class="zero"/>')
+        s.append(f'<text x="{x+bw/2:.1f}" y="{B+15}" class="ax mid">{HC_T[i]}</text>')
+        s.append(f'<text x="{xa+bw/2:.1f}" y="{B+15}" class="ax mid em">{hc}</text>')
+        s.append(f'<text x="{L+slot*i+slot/2:.1f}" y="{B+34}" class="ax mid">{m}月</text>')
+    s.append(f'<text x="{L-12}" y="{B+15}" class="ax ax-r sm">HC 目標／実績</text>')
+    s.append('</svg>')
+    return chr(10).join(s)
+
 FUN=[('1','情報数',26,'ターゲット情報の獲得'),('2','面接数',19,'面接まで到達'),('3','内定数',19,'内定提示・承諾'),('4','締結数',15,'業務委託契約の締結')]
 def funnel():
     X0,W=196,712; H=38; G=26; T=14
@@ -143,7 +193,7 @@ def joincurve():
     return '\n'.join(s)
 
 import json
-parts={'m_info':monthly(info,6,'情報数'),'m_sign':monthly(sign,6,'締結数'),'funnel':funnel(),
+parts={'hcwb':hcwb(),'m_info':monthly(info,6,'情報数'),'m_sign':monthly(sign,6,'締結数'),'funnel':funnel(),
        'channel':channel(),'guarantee':guarantee(),'joincurve':joincurve()}
 json.dump(parts,open(os.path.join(HERE,'charts.json'),'w'),ensure_ascii=False)
 print('generated', {k:len(v) for k,v in parts.items()})

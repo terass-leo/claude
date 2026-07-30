@@ -162,6 +162,19 @@ h2{font-family:var(--f-disp);font-size:23px;line-height:1.35;margin:0;font-weigh
 .g-flag{font-family:var(--f-data);font-size:10px;fill:var(--crit);letter-spacing:.06em;font-weight:600}
 .g-d{font-family:var(--f-data);font-size:11px;fill:var(--ink-2);font-variant-numeric:tabular-nums}
 
+
+.kv-hero>div{padding:20px 20px 18px;gap:6px}
+.kv-hero dd{font-size:30px}
+.kv .note .ok{color:var(--good);font-weight:600}
+.kv .note .ng{color:var(--warn);font-weight:600}
+.key.s1{background:var(--s1)}.key.s2{background:var(--s2)}
+.key.s3{background:var(--s3)}.key.s4{background:var(--s4)}
+table.mtx{font-size:12.5px}
+table.mtx th,table.mtx td{padding:8px 9px;white-space:nowrap}
+table.mtx td:first-child,table.mtx th:first-child{padding-left:2px;white-space:nowrap}
+table.mtx .tot{border-left:1px solid var(--hair);background:var(--hair-2)}
+table.mtx td.ng{color:var(--warn);font-weight:600}
+
 /* ---------- tables ---------- */
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--hair-2);vertical-align:top}
@@ -226,6 +239,70 @@ HTML = """<title>ピカイチ採用 コンディションボード</title>
     <span>決定実績 <b>Notion 決定候補者ログ（15名）</b></span>
   </div>
 </header>
+
+<!-- ================= FIRST VIEW: HC / WB ================= -->
+<section>
+  <div class="s-head" style="border-top:none;padding-top:0">
+    <div class="eyebrow">Monthly decisions — HC / WB</div>
+    <h2>月次の決定状況</h2>
+    <p class="s-note">HC＝決定人数、WB＝ウエイトバック（売上期待値の重み。ピカイチ3.0／準ピカイチ2.0／その他1.2／POP5.0）。同じ人数を採っても WB が下がれば売上インパクトは目減りする。<b>人数では超過、WBでは未達</b>が現在の状態。</p>
+  </div>
+
+  <div class="kv kv-hero">
+    <div>
+      <dt>累計 HC</dt>
+      <dd>15<span class="u">名</span></dd>
+      <div class="note"><span class="ok">目標 14名 ／ 達成率 107%</span></div>
+    </div>
+    <div>
+      <dt>累計 WB</dt>
+      <dd>37.4</dd>
+      <div class="note"><span class="ng">参考ベンチ 42.0 ／ 達成率 89%</span></div>
+    </div>
+    <div>
+      <dt>平均 WB ／ 人</dt>
+      <dd>2.49</dd>
+      <div class="note">ピカイチ基準3.0を下回る。WB3が9名・WB2が4名・WB1.2が2名</div>
+    </div>
+    <div>
+      <dt>直近3か月の平均WB</dt>
+      <dd>2.37</dd>
+      <div class="note"><span class="ng">3〜4月の3.00から低下</span>。単価ミックスが劣化傾向</div>
+    </div>
+  </div>
+
+  <div class="panel scroll">
+    __HCWB__
+    <div class="legend">
+      <span><i class="key s4"></i>POP WB5.0（実績0名）</span>
+      <span><i class="key s3"></i>ピカイチ WB3.0</span>
+      <span><i class="key s2"></i>準ピカイチ WB2.0</span>
+      <span><i class="key s1"></i>その他 WB1.2</span>
+      <span><i class="key t"></i>参考目標 WB（HC目標×3.0）</span>
+      <span>棒の高さ＝WB、下段の太字＝HC実績</span>
+    </div>
+  </div>
+
+  <div class="panel tight scroll">
+    <table class="mtx">
+      <caption>月次内訳 ― 締結日は Salesforce の ContractConclusionDate を正とし、締結後辞退（鈴木碧さん）は除外</caption>
+      <thead>
+        <tr><th>指標</th><th class="n">1月</th><th class="n">2月</th><th class="n">3月</th><th class="n">4月</th><th class="n">5月</th><th class="n">6月</th><th class="n">7月</th><th class="n">8月</th><th class="n">9月</th><th class="n">10月</th><th class="n">11月</th><th class="n">12月</th><th class="n tot">累計</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>HC 目標</td><td class="n">0</td><td class="n">0</td><td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">3</td><td class="n">2</td><td class="n">1</td><td class="n">2</td><td class="n">1</td><td class="n">1</td><td class="n tot">14</td></tr>
+        <tr><td><b>HC 実績</b></td><td class="n">0</td><td class="n">0</td><td class="n"><b>2</b></td><td class="n"><b>1</b></td><td class="n"><b>5</b></td><td class="n"><b>1</b></td><td class="n"><b>6</b></td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n tot"><b>15</b></td></tr>
+        <tr><td><b>WB 実績</b></td><td class="n">0</td><td class="n">0</td><td class="n"><b>6.0</b></td><td class="n"><b>3.0</b></td><td class="n"><b>11.2</b></td><td class="n"><b>3.0</b></td><td class="n"><b>14.2</b></td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n tot"><b>37.4</b></td></tr>
+        <tr><td>平均 WB</td><td class="n">—</td><td class="n">—</td><td class="n">3.00</td><td class="n">3.00</td><td class="n ng">2.24</td><td class="n">3.00</td><td class="n ng">2.37</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n tot">2.49</td></tr>
+        <tr><td>参考目標 WB</td><td class="n">0</td><td class="n">0</td><td class="n">6.0</td><td class="n">3.0</td><td class="n">3.0</td><td class="n">0</td><td class="n">9.0</td><td class="n">6.0</td><td class="n">3.0</td><td class="n">6.0</td><td class="n">3.0</td><td class="n">3.0</td><td class="n tot">42.0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="verdict">
+    <b>読み方：</b>7月は HC6名・WB14.2 で単月最大。ただし内訳はピカイチ3名・準ピカイチ2名・その他1名で、平均WBは2.37。3〜4月はピカイチのみで平均3.00だったため、<b>件数の伸びが質の低下と同時に起きている</b>。下期の残り（8〜12月）はHC目標7名＝参考WB21.0。ここを平均WB2.4で埋めるとHCは9名必要になり、入口の情報数が下期21件目標に対し2件しかない現状とは整合しない。<b>HCを積むのかWBを積むのかを先に決める必要がある</b>。
+  </div>
+</section>
 
 <!-- ================= CONDITION ================= -->
 <section>
@@ -513,7 +590,13 @@ HTML = """<title>ピカイチ採用 コンディションボード</title>
     <b>決定実績</b>： Notion「決定候補者ログ」データベース（15行、テンプレート行を除く）<br>
     <b>定義・ルール</b>： Notion「ピカイチ採用とは?」（WB定義、66%ルール、オファー4パターン、リファラルインセンティブ）／「KPI管理」（上期実績と振り返り、決定者出現率のベンチマーク50%）
   </div>
-  <h3>更新手順</h3>
+  <h3>毎月の運用</h3>
+  <div>
+    同じ内容を Apps Script 版（<b>dashboards/gas/</b>）としてスプレッドシートに載せてある。
+    決定者マスタに1行足すだけで HC・WB・保証率・アラートが自動で再計算されるので、
+    月次の運用はそちらを使う。本ページは基準日時点のスナップショットとして残す。
+  </div>
+  <h3>更新手順（本ページを作り直す場合）</h3>
   <ol>
     <li>シートの月次「実績」行と、Notion決定候補者ログの新規行を確定させる（締結は辞退控除後の実効値で数える）</li>
     <li>コンディション4信号を再判定する。入口は「下期進捗率 vs 時間進捗率」、投資規律は「保証率が66%を超えた人数」で見る</li>
@@ -525,7 +608,8 @@ HTML = """<title>ピカイチ採用 コンディションボード</title>
 </div>
 """
 
-HTML = (HTML.replace('__FUNNEL__', C['funnel'])
+HTML = (HTML.replace('__HCWB__', C['hcwb'])
+            .replace('__FUNNEL__', C['funnel'])
             .replace('__M_INFO__', C['m_info'])
             .replace('__M_SIGN__', C['m_sign'])
             .replace('__CHANNEL__', C['channel'])
@@ -536,6 +620,6 @@ with io.open(os.path.join(HERE,'pikaichi-condition-board.html'),'w',encoding='ut
     f.write(HTML)
 print('written', len(HTML), 'chars')
 assert '__' not in HTML.replace('__','') or True
-for tok in ['__FUNNEL__','__M_INFO__','__M_SIGN__','__CHANNEL__','__GUARANTEE__','__JOINCURVE__']:
+for tok in ['__HCWB__','__FUNNEL__','__M_INFO__','__M_SIGN__','__CHANNEL__','__GUARANTEE__','__JOINCURVE__']:
     assert tok not in HTML, tok
 print('placeholders ok')
