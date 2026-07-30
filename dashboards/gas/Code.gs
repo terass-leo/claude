@@ -14,8 +14,9 @@ var CONFIG = {
   // 決定者マスタ（1候補者1行）。無ければメニューから作成できる。
   masterSheet: '決定者マスタ',
 
-  // 月次ファネルの目標／実績が入っているシートと、C4ブロックの見出しセル。
+  // 既存の進捗管理シートを流用する場合に、月次ファネルの C4 ブロックを読むシート名。
   // 見出し行から「目標」「実績」の列ペアを自動検出するので、列がずれても追従する。
+  // 新しいスプレッドシートで始める場合はこのシートが無くてよく、下の targetSheet を読む。
   funnelSheet: 'ピカイチファネル',
   funnelAnchor: '1. 情報数',   // このラベルを含む行を起点にブロックを探す
 
@@ -27,10 +28,11 @@ var CONFIG = {
     sign:  '8. 締結数'
   },
 
-  // 選考中一覧（パイプライン）。フェーズ列は見出し名で探す。
+  // 選考中一覧（パイプライン）。各列は見出し名で探すので列順は自由。
   pipelineSheet: '選考中一覧',
   pipelinePhaseHeader: '採用フェーズ',
   pipelineNameHeader: '候補者指名',
+  pipelineConfidenceHeader: '確度',
 
   // ファネルの C4 ブロックが見つからない場合に読む、シンプルな月次目標シート。
   // 新規スプレッドシートでは最初からこちらを使えばよい。
@@ -75,7 +77,8 @@ function onOpen() {
     .addSubMenu(SpreadsheetApp.getUi().createMenu('シート操作')
       .addItem('決定者マスタを作成 / 初期化', 'setupMasterSheet')
       .addItem('決定者の初期データを投入', 'seedMasterSheet')
-      .addItem('月次目標シートを作成', 'createTargetSheet'))
+      .addItem('月次目標シートを作成', 'createTargetSheet')
+      .addItem('選考中一覧を作成 / 投入', 'createPipelineSheet'))
     .addToUi();
 }
 
@@ -265,41 +268,48 @@ function readMetricRow_(values, labelRow, pairs, label) {
   return blankPairs_();
 }
 
-/** 選考中一覧をフェーズ別に集計 */
+/** 選考中一覧をフェーズ別に集計。確度も拾う */
 function readPipeline_() {
+  var empty = { found: false, phases: [], active: 0, pending: 0, total: 0, high: 0 };
   var sh = SpreadsheetApp.getActive().getSheetByName(CONFIG.pipelineSheet);
-  if (!sh) return { found: false, phases: [], active: 0, pending: 0, total: 0 };
+  if (!sh) return empty;
 
   var values = sh.getDataRange().getValues();
-  var headRow = -1, phaseCol = -1, nameCol = -1;
+  var headRow = -1, phaseCol = -1, nameCol = -1, confCol = -1;
   for (var r = 0; r < Math.min(values.length, 40); r++) {
     for (var c = 0; c < values[r].length; c++) {
       var v = String(values[r][c]).trim();
       if (v === CONFIG.pipelinePhaseHeader) { headRow = r; phaseCol = c; }
-      if (v === CONFIG.pipelineNameHeader) { nameCol = c; }
+      if (v === CONFIG.pipelineNameHeader) nameCol = c;
+      // 「採用確度」のような表記ゆれも拾えるよう部分一致にする
+      if (confCol < 0 && v.indexOf(CONFIG.pipelineConfidenceHeader) >= 0) confCol = c;
     }
     if (headRow >= 0) break;
   }
-  if (headRow < 0) return { found: false, phases: [], active: 0, pending: 0, total: 0 };
+  if (headRow < 0) return empty;
 
   var buckets = {};
   for (var r2 = headRow + 1; r2 < values.length; r2++) {
     var phase = String(values[r2][phaseCol] || '').trim();
     if (!phase) continue;
-    // 締結済・辞退は選考中ではない
-    if (/締結|辞退/.test(phase)) continue;
+    if (/締結|辞退/.test(phase)) continue;   // 締結済・辞退は選考中ではない
     if (!buckets[phase]) buckets[phase] = [];
-    if (nameCol >= 0) {
-      var nm = String(values[r2][nameCol] || '').trim();
-      if (nm) buckets[phase].push(nm);
-    }
+    var nm = nameCol >= 0 ? String(values[r2][nameCol] || '').trim() : '';
+    if (!nm) continue;
+    buckets[phase].push({
+      name: nm,
+      confidence: confCol >= 0 ? String(values[r2][confCol] || '').trim() : ''
+    });
   }
 
   var phases = Object.keys(buckets).sort().map(function (k) {
+    var rows = buckets[k];
     return {
       phase: k,
-      count: buckets[k].length || 0,
-      names: buckets[k],
+      count: rows.length,
+      rows: rows,
+      names: rows.map(function (x) { return x.name; }),
+      high: rows.filter(function (x) { return /高/.test(x.confidence); }).length,
       pending: /ペンディング|保留/.test(k)
     };
   });
@@ -307,8 +317,11 @@ function readPipeline_() {
     return phases.filter(function (p) { return p.pending === pending; })
                  .reduce(function (a, p) { return a + p.count; }, 0);
   }
-  return { found: true, phases: phases, active: tally(false), pending: tally(true),
-           total: tally(false) + tally(true) };
+  return {
+    found: true, phases: phases,
+    active: tally(false), pending: tally(true), total: tally(false) + tally(true),
+    high: phases.reduce(function (a, p) { return a + (p.pending ? 0 : p.high); }, 0)
+  };
 }
 
 /** 月次の HC / WB / 区分別内訳 */
@@ -581,6 +594,27 @@ var SEED_TARGETS = {
   '締結数 実績': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 };
 
+// 選考中の候補者（2026/07/30時点）。確度は「1.高 / 2.中 / 3.低」で入れる。
+var SEED_PIPELINE = [
+  ['徳久 雄一郎',   '住友不動産販売',                 'ピカイチ経路', '大河原さん',                 '05 内定承諾見込み', '2.中', '10/1参画予定。保証2,300万円想定'],
+  ['小原澤 健太',   '東急リバブル',                   'ピカイチ経路', '大山さんからの紹介の紹介',   '04 オファー面談',   '1.高', '会食実施済'],
+  ['山本 貴之',     '東急リバブル',                   'ピカイチ経路', '小原澤さんからの紹介',       '04 オファー面談',   '2.中', '会食実施済'],
+  ['関さん',         '令和地所',                       'ピカイチ経路', '吉田さん',                   '04 オファー面談',   '2.中', ''],
+  ['木崎 在',       '住友不動産販売',                 'ピカイチ経路', '鈴木さん',                   '04 オファー面談',   '2.中', ''],
+  ['髙橋 寛臣',     '住友不動産販売',                 'ピカイチ経路', '西野さん',                   '04 オファー面談',   '2.中', ''],
+  ['飯塚 将平',     '東宝ハウス',                     'ピカイチ経路', '常光さん',                   '04 オファー面談',   '',     '東宝ハウス経路の2人目'],
+  ['山村 政裕',     '野村ソリューションズ',           'その他',       'あゆみ名刺',                 '04 オファー面談',   '3.低', ''],
+  ['加藤 雄也',     'モダンスタンダード',             'その他',       '通常採用から送客',           '03 最終面接',       '3.低', '年収保証の面接を実施予定'],
+  ['小林 孝明',     '住友不動産販売',                 '自社サイト',   '',                           '02 一次面接',       '3.低', ''],
+  ['野上 裕行',     '住友不動産販売',                 'ピカイチ経路', '岡部さん',                   '02 一次面接',       '3.低', ''],
+  ['永野 正太郎',   '住友不動産販売',                 'ピカイチ経路', '根上さん',                   '09 ペンディング',   '3.低', '山元が一度カジュアル面談'],
+  ['渡邊さん',       '住友不動産販売',                 'ピカイチ経路', '大河原さん',                 '09 ペンディング',   '3.低', '大河原さんフォロー中'],
+  ['守屋 裕章',     '東急リバブル',                   'ピカイチ経路', '大山さん',                   '09 ペンディング',   '3.低', '住宅購入を検討中で当面動けない'],
+  ['久保 恵亮',     '株式会社パワーコンサルティングワークス', 'ピカイチ経路', '李さん',            '09 ペンディング',   '2.中', '']
+];
+
+var PIPELINE_HEADERS = ['候補者指名', '現職', '応募経路', '紹介者', '採用フェーズ', '確度', 'メモ'];
+
 /**
  * 貼り付け直後の1回だけ実行する。
  * 決定者マスタ → 初期データ → 月次目標シート → 診断 をまとめて行う。
@@ -598,12 +632,14 @@ function bootstrap() {
   setupMasterSheet(true);
   var added = seedMasterSheet(true);
 
-  var hasFunnel = !!SpreadsheetApp.getActive().getSheetByName(CONFIG.funnelSheet);
-  if (!hasFunnel) createTargetSheet(true);
+  var ss = SpreadsheetApp.getActive();
+  var made = [];
+  if (!ss.getSheetByName(CONFIG.funnelSheet)) { createTargetSheet(true); made.push(CONFIG.targetSheet); }
+  if (!ss.getSheetByName(CONFIG.pipelineSheet)) { createPipelineSheet(true); made.push(CONFIG.pipelineSheet); }
 
-  SpreadsheetApp.getActive().toast(
-    '決定者 ' + added + '行を投入しました。' + (hasFunnel ? '' : '月次目標シートも作成しました。'),
-    'セットアップ完了', 8);
+  ss.toast('決定者 ' + added + '行を投入しました。' +
+           (made.length ? made.join('・') + ' も作成しました。' : ''),
+           'セットアップ完了', 8);
   diagnose();
 }
 
@@ -638,6 +674,32 @@ function seedMasterSheet(silent) {
     ss.toast(rows.length ? rows.length + '行を追加しました。' : '追加する行はありませんでした（すべて登録済み）。',
              'ピカイチ採用', 5);
   }
+  return rows.length;
+}
+
+/** 選考中一覧シートを作り、現在の選考中候補者を投入する */
+function createPipelineSheet(silent) {
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(CONFIG.pipelineSheet);
+  if (!sh) sh = ss.insertSheet(CONFIG.pipelineSheet);
+
+  var existing = {};
+  if (sh.getLastRow() > 1) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().forEach(function (r) {
+      var n = String(r[0]).trim();
+      if (n) existing[n] = true;
+    });
+  } else {
+    sh.getRange(1, 1, 1, PIPELINE_HEADERS.length).setValues([PIPELINE_HEADERS]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+
+  var rows = SEED_PIPELINE.filter(function (r) { return !existing[r[0]]; });
+  if (rows.length) {
+    sh.getRange(Math.max(sh.getLastRow() + 1, 2), 1, rows.length, PIPELINE_HEADERS.length).setValues(rows);
+    sh.autoResizeColumns(1, PIPELINE_HEADERS.length);
+  }
+  if (!silent) ss.toast(rows.length + '行を投入しました。', 'ピカイチ採用', 5);
   return rows.length;
 }
 
@@ -736,8 +798,8 @@ function diagnose() {
 
   try {
     var p = readPipeline_();
-    lines.push(p.found ? '○ 選考中 ' + p.total + '名（' + p.phases.length + 'フェーズ）'
-                       : '× 選考中一覧の「' + CONFIG.pipelinePhaseHeader + '」列が見つかりません');
+    lines.push(p.found ? '○ 選考中 ' + p.active + '名 / ペンディング ' + p.pending + '名（確度「高」' + p.high + '名）'
+                       : '－ 選考中一覧なし（' + CONFIG.pipelineSheet + ' の「' + CONFIG.pipelinePhaseHeader + '」列が見つかりません）');
   } catch (e) { lines.push('× パイプライン読み取りエラー：' + e.message); }
 
   SpreadsheetApp.getUi().alert('設定の診断\n\n' + lines.join('\n'));

@@ -154,6 +154,8 @@ table.mtx th,table.mtx td{padding:8px 9px;white-space:nowrap}
 table.mtx .tot{border-left:1px solid var(--hair);background:var(--hair-2)}
 table.mtx td.ng{color:var(--warn);font-weight:600}
 .ph{font-family:var(--f-data);font-size:11px;color:var(--bronze);letter-spacing:.06em}
+.conf{font-family:var(--f-data);font-size:10.5px;color:var(--muted)}
+.conf.hi{color:var(--good);font-weight:600}
 .names{color:var(--ink-2);font-size:12.5px;line-height:1.7}
 .err{background:var(--crit-bg);color:var(--crit);border:1px solid var(--crit);padding:18px 20px;
   font-size:13.5px;line-height:1.8}
@@ -569,15 +571,32 @@ footer{border-top:1px solid var(--hair);padding-top:22px;font-size:12.5px;color:
 
   // パイプライン
   if (D.pipeline.found) {
+    var remain = T.half.sign.target - T.half.sign.actual;
     out.push('<section>' +
-      head('Pipeline', '残パイプライン',
+      head('Pipeline', '残パイプライン — ' + T.half.label + '残り' + Math.max(remain, 0) + '名を埋められるか',
         '選考が動いているのが <b>' + D.pipeline.active + '名</b>、ペンディングが <b>' +
-        D.pipeline.pending + '名</b>（締結済・辞退を除く）。') +
+        D.pipeline.pending + '名</b>（締結済・辞退を除く）。うち確度「高」は <b>' +
+        D.pipeline.high + '名</b>。') +
+      '<div class="kv">' +
+        tile(T.half.label + '締結 残り', Math.max(remain, 0), '名',
+          '目標 ' + T.half.sign.target + '名 － 確定 ' + T.half.sign.actual + '名') +
+        tile('選考中', D.pipeline.active, '名', 'ペンディングを除く') +
+        tile('うち確度「高」', D.pipeline.high, '名',
+          D.pipeline.high < Math.max(remain, 0)
+            ? '<span class="ng">残り' + Math.max(remain, 0) + '名に対して不足</span>'
+            : '残りを満たす水準') +
+        tile('ペンディング', D.pipeline.pending, '名', '長期フォロー枠') +
+      '</div>' +
       '<div class="panel tight scroll"><table>' +
-        '<thead><tr><th>採用フェーズ</th><th class="n">人数</th><th>候補者</th></tr></thead><tbody>' +
+        '<thead><tr><th>採用フェーズ</th><th class="n">人数</th><th class="n">確度 高</th><th>候補者（確度）</th></tr></thead><tbody>' +
         D.pipeline.phases.map(function (p) {
+          var who = p.rows.map(function (x) {
+            return esc(x.name) + (x.confidence ? ' <span class="conf' +
+              (/高/.test(x.confidence) ? ' hi' : '') + '">' + esc(x.confidence) + '</span>' : '');
+          }).join('　');
           return '<tr><td class="ph">' + esc(p.phase) + '</td><td class="n"><b>' + p.count +
-            '</b></td><td class="names">' + esc(p.names.join('／')) + '</td></tr>';
+            '</b></td><td class="n">' + (p.pending ? '—' : p.high) + '</td>' +
+            '<td class="names">' + who + '</td></tr>';
         }).join('') + '</tbody></table></div>' +
     '</section>');
   }
