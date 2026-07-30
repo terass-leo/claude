@@ -170,6 +170,41 @@ table.mtx td:first-child,table.mtx th:first-child{padding-left:2px;white-space:n
 table.mtx .tot{border-left:1px solid var(--hair);background:var(--hair-2)}
 table.mtx td.ng{color:var(--warn);font-weight:600}
 
+
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border:1px solid var(--hair)}
+@media(max-width:720px){.hero{grid-template-columns:1fr}}
+.hero>div{background:var(--panel);padding:24px 26px;display:flex;flex-direction:column;gap:8px}
+.hero dt{font-family:var(--f-data);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hero .big{font-family:var(--f-data);font-size:clamp(42px,6vw,58px);line-height:.95;
+  font-variant-numeric:tabular-nums;font-weight:500;letter-spacing:-.02em;display:flex;align-items:baseline;gap:6px}
+.hero .big .u{font-size:17px;color:var(--muted);letter-spacing:0}
+.hero .vs{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-family:var(--f-data);
+  font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hero .vs b{color:var(--ink-2);font-weight:600}
+.diff{display:inline-flex;align-items:center;gap:4px;font-family:var(--f-data);font-size:12px;
+  font-weight:600;padding:3px 9px;border-radius:2px}
+.diff.up{background:var(--good-bg);color:var(--good)}
+.diff.down{background:var(--crit-bg);color:var(--crit)}
+.roster{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair)}
+@media(max-width:980px){.roster{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:660px){.roster{grid-template-columns:1fr}}
+.card{background:var(--panel);padding:20px;display:flex;flex-direction:column;gap:11px}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.card-nm{font-family:var(--f-disp);font-size:19px;font-weight:600;line-height:1.3}
+.card-org{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:2px}
+.wbbadge{flex:none;font-family:var(--f-data);font-size:10.5px;font-weight:600;letter-spacing:.04em;
+  padding:4px 8px;border-radius:2px;color:#fff;white-space:nowrap}
+.wbbadge.s4{background:var(--s4)}.wbbadge.s3{background:var(--s3)}
+.wbbadge.s2{background:var(--s2)}.wbbadge.s1{background:var(--s1);color:var(--ink)}
+.card-career{font-size:12.5px;line-height:1.8;color:var(--ink-2);border-top:1px solid var(--hair-2);
+  padding-top:11px;flex:1 1 auto}
+.card-foot{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--hair-2);padding-top:11px;
+  font-family:var(--f-data);font-size:11.5px;font-variant-numeric:tabular-nums;margin:0}
+.card-foot div{display:flex;justify-content:space-between;gap:10px}
+.card-foot dt{color:var(--muted);font-family:var(--f-body);font-size:11px}
+.card-foot dd{margin:0;color:var(--ink);font-weight:600}
+.card-foot dd.join{color:var(--bronze)}
+
 /* ---------- tables ---------- */
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--hair-2);vertical-align:top}
@@ -232,9 +267,112 @@ footer ol{margin:0;padding-left:1.4em}
   </div>
 </header>
 
-<!-- ================= FIRST VIEW: HC / WB ================= -->
+<!-- ================= THIS MONTH ================= -->
 <section>
   <div class="s-head" style="border-top:none;padding-top:0">
+    <div class="eyebrow">This month — 7月</div>
+    <h2>7月の決定状況</h2>
+    <p class="s-note">当月に契約締結した人数（HC）と売上インパクトの重み（WB）。<b>単月では過去最大</b>だが、内訳はピカイチ3名・準ピカイチ2名・その他1名で平均WBは2.37。</p>
+  </div>
+
+  <div class="hero">
+    <div>
+      <dt>7月 の決定 HC</dt>
+      <div class="big">6<span class="u">名</span></div>
+      <div class="vs"><span>目標 <b>3名</b></span><span class="diff up">目標差 +3名</span></div>
+    </div>
+    <div>
+      <dt>7月 の決定 WB</dt>
+      <div class="big">14.2</div>
+      <div class="vs"><span>参考目標 <b>9.0</b></span><span class="diff up">目標差 +5.2</span><span>平均WB <b>2.37</b></span></div>
+    </div>
+  </div>
+
+  <div class="roster">
+      <div class="card">
+        <div class="card-top"><div>
+          <div class="card-nm">中川 雅史</div>
+          <div class="card-org">住友不動産販売</div>
+        </div><span class="wbbadge s3">ピカイチ 3</span></div>
+        <div class="card-career">住友不動産STEP出身。鈴木さんからの紹介。住友では所長として勤務。埼玉内ではずっとトップセールス。業者との繋がりも強く売上期待値は高い。</div>
+        <dl class="card-foot">
+          <div><dt>参画予定</dt><dd class="join">2026年8月</dd></div>
+          <div><dt>締結日</dt><dd>2026/07/01</dd></div>
+          <div><dt>売上期待値</dt><dd>3,000<span class="fn-u"> 万円</span></dd></div>
+          <div><dt>保証コミット</dt><dd>2,200<span class="fn-u"> 万円</span></dd></div>
+        </dl>
+      </div>
+      <div class="card">
+        <div class="card-top"><div>
+          <div class="card-nm">西野 大智</div>
+          <div class="card-org">住友不動産販売</div>
+        </div><span class="wbbadge s2">準ピカイチ 2</span></div>
+        <div class="card-career">住友不動産STEP出身。谷津さん会食からの決定。英語が話せ海外顧客の対応が得意。売上期待値は2,500万円程度。本人の年収保証への期待値が低く1,100万円で着地。奥様も住友の営業で売上はさらに高く、こちらも狙いにいく。</div>
+        <dl class="card-foot">
+          <div><dt>参画予定</dt><dd class="join">2026年9月</dd></div>
+          <div><dt>締結日</dt><dd>2026/07/02</dd></div>
+          <div><dt>売上期待値</dt><dd>2,400<span class="fn-u"> 万円</span></dd></div>
+          <div><dt>保証コミット</dt><dd>1,100<span class="fn-u"> 万円</span></dd></div>
+        </dl>
+      </div>
+      <div class="card">
+        <div class="card-top"><div>
+          <div class="card-nm">岡田 雅美</div>
+          <div class="card-org">住友不動産販売</div>
+        </div><span class="wbbadge s3">ピカイチ 3</span></div>
+        <div class="card-career">住友不動産STEP出身。神奈川の超ビッグネーム。自社サイト経由で山元がアプローチしていたが、AAの藤井さんがフォローして再面談となった。ベッタリの業者からの集客が強く、1億以上の売上期待値あり。</div>
+        <dl class="card-foot">
+          <div><dt>参画予定</dt><dd class="join">2026年8月</dd></div>
+          <div><dt>締結日</dt><dd>2026/07/07</dd></div>
+          <div><dt>売上期待値</dt><dd>4,200<span class="fn-u"> 万円</span></dd></div>
+          <div><dt>保証コミット</dt><dd>なし</dd></div>
+        </dl>
+      </div>
+      <div class="card">
+        <div class="card-top"><div>
+          <div class="card-nm">吉村 剣郎</div>
+          <div class="card-org">住友不動産販売</div>
+        </div><span class="wbbadge s1">その他 1.2</span></div>
+        <div class="card-career">住友不動産STEP出身。谷津さん会食からの決定。東京西側エリアで実績を出して都心に呼ばれた優秀層。比較的若手で売上期待値は1,500万円程度。行動力の担保が必要。</div>
+        <dl class="card-foot">
+          <div><dt>参画予定</dt><dd class="join">2026年9月</dd></div>
+          <div><dt>締結日</dt><dd>2026/07/14</dd></div>
+          <div><dt>売上期待値</dt><dd>2,100<span class="fn-u"> 万円</span></dd></div>
+          <div><dt>保証コミット</dt><dd>1,000<span class="fn-u"> 万円</span></dd></div>
+        </dl>
+      </div>
+      <div class="card">
+        <div class="card-top"><div>
+          <div class="card-nm">池田 悠真</div>
+          <div class="card-org">住友不動産販売</div>
+        </div><span class="wbbadge s2">準ピカイチ 2</span></div>
+        <div class="card-career">住友不動産STEP出身。谷津さん会食からの決定。比較的若手で売上期待値は2,500万円程度。年収保証ではなく固定給にうまくスライドさせられた。</div>
+        <dl class="card-foot">
+          <div><dt>参画予定</dt><dd class="join">2026年8月</dd></div>
+          <div><dt>締結日</dt><dd>2026/07/15</dd></div>
+          <div><dt>売上期待値</dt><dd>2,400<span class="fn-u"> 万円</span></dd></div>
+          <div><dt>保証コミット</dt><dd>120<span class="fn-u"> 万円</span></dd></div>
+        </dl>
+      </div>
+      <div class="card">
+        <div class="card-top"><div>
+          <div class="card-nm">安彦 詠太</div>
+          <div class="card-org">住友不動産販売</div>
+        </div><span class="wbbadge s3">ピカイチ 3</span></div>
+        <div class="card-career">住友不動産STEP出身。鈴木さんからの紹介。鈴木さんが「自分が抜けた後のビッグネーム」と評するほど優秀。住友での売上は2億程度。7月中旬の面談で承諾を得て9月1日参画で着地させられた好事例。</div>
+        <dl class="card-foot">
+          <div><dt>参画予定</dt><dd class="join">2026年9月</dd></div>
+          <div><dt>締結日</dt><dd>2026/07/27</dd></div>
+          <div><dt>売上期待値</dt><dd><span style="color:var(--warn)">未登録</span></dd></div>
+          <div><dt>保証コミット</dt><dd>1,900<span class="fn-u"> 万円</span></dd></div>
+        </dl>
+      </div>
+  </div>
+</section>
+
+<!-- ================= FIRST VIEW: HC / WB ================= -->
+<section>
+  <div class="s-head">
     <div class="eyebrow">Monthly decisions — HC / WB</div>
     <h2>月次の決定状況</h2>
     <p class="s-note">HC＝決定人数、WB＝ウエイトバック（売上期待値の重み。ピカイチ3.0／準ピカイチ2.0／その他1.2／POP5.0）。同じ人数を採っても WB が下がれば売上インパクトは目減りする。<b>人数では超過、WBでは未達</b>が現在の状態。</p>

@@ -91,6 +91,42 @@ h2{font-family:var(--f-disp);font-size:22px;line-height:1.35;margin:0;font-weigh
 .kv .note .ok{color:var(--good);font-weight:600}
 .kv .note .ng{color:var(--warn);font-weight:600}
 
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border:1px solid var(--hair)}
+@media(max-width:720px){.hero{grid-template-columns:1fr}}
+.hero>div{background:var(--panel);padding:24px 26px;display:flex;flex-direction:column;gap:8px}
+.hero dt{font-family:var(--f-data);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hero .big{font-family:var(--f-data);font-size:clamp(42px,6vw,58px);line-height:.95;
+  font-variant-numeric:tabular-nums;font-weight:500;letter-spacing:-.02em;display:flex;align-items:baseline;gap:6px}
+.hero .big .u{font-size:17px;color:var(--muted);letter-spacing:0}
+.hero .vs{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-family:var(--f-data);
+  font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hero .vs b{color:var(--ink-2);font-weight:600}
+.diff{display:inline-flex;align-items:center;gap:4px;font-family:var(--f-data);font-size:12px;
+  font-weight:600;padding:3px 9px;border-radius:2px;letter-spacing:.02em}
+.diff.up{background:var(--good-bg);color:var(--good)}
+.diff.down{background:var(--crit-bg);color:var(--crit)}
+.diff.flat{background:var(--hair-2);color:var(--ink-2)}
+
+.roster{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair)}
+@media(max-width:980px){.roster{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:660px){.roster{grid-template-columns:1fr}}
+.card{background:var(--panel);padding:20px;display:flex;flex-direction:column;gap:11px}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.card-nm{font-family:var(--f-disp);font-size:19px;font-weight:600;line-height:1.3}
+.card-org{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:2px}
+.wbbadge{flex:none;font-family:var(--f-data);font-size:10.5px;font-weight:600;letter-spacing:.04em;
+  padding:4px 8px;border-radius:2px;color:#fff;white-space:nowrap}
+.wbbadge.s4{background:var(--s4)}.wbbadge.s3{background:var(--s3)}
+.wbbadge.s2{background:var(--s2)}.wbbadge.s1{background:var(--s1);color:var(--ink)}
+.card-career{font-size:12.5px;line-height:1.8;color:var(--ink-2);border-top:1px solid var(--hair-2);padding-top:11px;flex:1 1 auto}
+.card-career.none{color:var(--muted);font-family:var(--f-data);font-size:11.5px}
+.card-foot{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--hair-2);padding-top:11px;
+  font-family:var(--f-data);font-size:11.5px;font-variant-numeric:tabular-nums}
+.card-foot div{display:flex;justify-content:space-between;gap:10px}
+.card-foot dt{color:var(--muted);font-family:var(--f-body);font-size:11px}
+.card-foot dd{margin:0;color:var(--ink);font-weight:600}
+.card-foot dd.join{color:var(--bronze)}
+
 .alerts{display:flex;flex-direction:column;gap:1px;background:var(--hair);border:1px solid var(--hair)}
 .alert{background:var(--panel);padding:16px 20px;display:grid;grid-template-columns:74px 1fr;gap:16px;align-items:start}
 @media(max-width:640px){.alert{grid-template-columns:1fr;gap:8px}}
@@ -436,6 +472,63 @@ footer{border-top:1px solid var(--hair);padding-top:22px;font-size:12.5px;color:
       '<button type="button" id="theme">表示テーマを切り替え</button>' +
     '</div>' +
   '</header>');
+
+  // 今月の決定（ど頭）
+  var F = D.focus;
+  function diffPill(v, unit) {
+    var cls = v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
+    var sign = v > 0 ? '+' : v < 0 ? '−' : '±';
+    var abs = Math.abs(v);
+    return '<span class="diff ' + cls + '">目標差 ' + sign + (unit === '名' ? abs : n1(abs)) +
+           (unit || '') + '</span>';
+  }
+  out.push('<section>' +
+    head('This month — ' + esc(F.monthLabel), F.monthLabel + 'の決定状況',
+      '当月に契約締結した人数（HC）と売上インパクトの重み（WB）。' +
+      (F.hc === 0 ? '<b>当月はまだ決定なし。</b>内訳は直近で決定のあった' + esc(F.membersMonthLabel) + 'を表示している。' : '')) +
+    '<div class="hero">' +
+      '<div>' +
+        '<dt>' + esc(F.monthLabel) + ' の決定 HC</dt>' +
+        '<div class="big">' + F.hc + '<span class="u">名</span></div>' +
+        '<div class="vs"><span>目標 <b>' + F.hcTarget + '名</b></span>' + diffPill(F.hcDiff, '名') + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<dt>' + esc(F.monthLabel) + ' の決定 WB</dt>' +
+        '<div class="big">' + n1(F.wb) + '</div>' +
+        '<div class="vs"><span>参考目標 <b>' + n1(F.wbTarget) + '</b></span>' + diffPill(F.wbDiff, '') +
+          (F.avgWb !== null ? '<span>平均WB <b>' + n2(F.avgWb) + '</b></span>' : '') + '</div>' +
+      '</div>' +
+    '</div>' +
+    (F.members.length
+      ? '<div class="roster">' + F.members.map(card).join('') + '</div>' +
+        (F.careerMissing
+          ? '<p class="s-note">経歴・実績が未入力： <b>' + F.careerMissing + '名</b>。' +
+            '決定者マスタの「経歴・実績」列に入れるとここに出る。</p>'
+          : '')
+      : '<div class="panel"><p class="s-note" style="margin:0">今年はまだ決定がありません。' +
+        '決定者マスタに1行足すとここに出ます。</p></div>') +
+  '</section>');
+
+  function card(m) {
+    var foot = [
+      ['参画予定', '<span class="join">' + esc(m.joinLabel) + '</span>', true],
+      ['締結日', esc(m.signDate)],
+      ['売上期待値', m.expect ? comma(m.expect) + '<span class="fn-u"> 万円</span>' : '<span style="color:var(--warn)">未登録</span>'],
+      ['保証コミット', m.commit ? comma(m.commit) + '<span class="fn-u"> 万円</span>' : 'なし']
+    ];
+    return '<div class="card">' +
+      '<div class="card-top"><div>' +
+        '<div class="card-nm">' + esc(m.name) + '</div>' +
+        '<div class="card-org">' + esc(m.origin) + '</div>' +
+      '</div><span class="wbbadge wbadge ' + m.slot + '">' + esc(m.tier) + ' ' + m.wb + '</span></div>' +
+      (m.career
+        ? '<div class="card-career">' + esc(m.career) + '</div>'
+        : '<div class="card-career none">経歴・実績 未入力</div>') +
+      '<dl class="card-foot">' + foot.map(function (f) {
+        return '<div><dt>' + f[0] + '</dt><dd' + (f[2] ? ' class="join"' : '') + '>' + f[1] + '</dd></div>';
+      }).join('') + '</dl>' +
+    '</div>';
+  }
 
   // 自動アラート
   out.push('<section>' +
