@@ -20,6 +20,9 @@ description: 前日にLeo（小柴礼生 / U02GDKKU5UH）宛にSlackで来た個
 - Leoのuser_id: `U02GDKKU5UH`。投稿先は自分宛DM（`slack_send_message` の `channel_id` に `U02GDKKU5UH` を渡す）。
   **他のチャンネルには絶対に投稿しない。** DM・プライベートチャンネル由来の機微情報を含むため。
 - タイムゾーンは常に **Asia/Tokyo (JST)**。Slack検索の `on:` もワークスペースのTZ（JST）で解釈される。
+- **コンテナのシステム時刻はUTC。日付は必ず `TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M (%a)'` で確定してから使う。**
+  朝8時JST起動時のUTC日付は**前日**になるため、UTCの日付をそのまま「今日」として扱うと
+  対象範囲もヘッダの日付も1日ずれる（前日分を丸ごと取りこぼす）。**このジョブで最も起きやすい事故なので必ず守る。**
 - 検索は `slack_search_public_and_private` を使う（DM・プライベートチャンネルを含むため）。
   このジョブの存在自体がプライベート検索への同意とみなす。毎回の確認は不要。
 
@@ -94,6 +97,8 @@ Step 2 で残ったメッセージと、Step 1 の繰越候補の**両方**に�
 
 1. **スレッドrootの特定**: Permalink に `thread_ts=` があればその値がroot。なければ自身の `Message_ts` がroot。
 2. `slack_read_thread`（channel_id + root ts、response_format: `detailed`）でスレッド全体を取得する。
+   **root tsを渡す引数名は `message_ts`**（`thread_ts` ではない。間違えると
+   `initialization_failed: Missing value for parameter message_ts` で落ちる）。
 3. **返信済み**: スレッド内に `U02GDKKU5UH` 発のメッセージがあり、その ts が**対象メッセージの ts より後**なら返信済み。
 4. **リアクションのみ**: 返信は無いが、対象メッセージの reactions に `U02GDKKU5UH` が含まれる場合。
    返信済み扱いにはせず、`■ 共有・報告` 側に「リアクション済み」と注記して置く。
