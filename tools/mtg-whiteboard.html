@@ -1,0 +1,1317 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>板書</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Kurenaido&family=DM+Mono:wght@400;500&display=swap">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    /* ライト = ホワイトボード */
+    --board:      #FBFCFC;
+    --grid:       #C3CFCE;
+    --surface:    rgba(255,255,255,.93);
+    --surface-2:  #EDF1F0;
+    --line:       #D3DBDA;
+    --line-soft:  #E4EAE9;
+    --ink:        #1B2126;
+    --muted:      #667070;
+    --accent:     #0B6E63;
+    --accent-ink: #FFFFFF;
+    --accent-soft: rgba(11,110,99,.10);
+    --danger:     #C0392B;
+    --shadow:     0 1px 2px rgba(20,40,38,.06), 0 8px 24px -8px rgba(20,40,38,.22);
+    --sel:        #0B6E63;
+
+    --r-panel: 12px;
+    --r-btn: 9px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      /* ダーク = 黒板 */
+      --board:      #1A1F24;
+      --grid:        #333D42;
+      --surface:    rgba(30,36,41,.94);
+      --surface-2:  #262E33;
+      --line:       #39434A;
+      --line-soft:  #2E373D;
+      --ink:        #E4E9E9;
+      --muted:      #94A1A1;
+      --accent:     #34C0AE;
+      --accent-ink: #0E1A19;
+      --accent-soft: rgba(52,192,174,.14);
+      --danger:     #F0806F;
+      --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -8px rgba(0,0,0,.55);
+      --sel:        #34C0AE;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --board:      #1A1F24;
+    --grid:        #333D42;
+    --surface:    rgba(30,36,41,.94);
+    --surface-2:  #262E33;
+    --line:       #39434A;
+    --line-soft:  #2E373D;
+    --ink:        #E4E9E9;
+    --muted:      #94A1A1;
+    --accent:     #34C0AE;
+    --accent-ink: #0E1A19;
+    --accent-soft: rgba(52,192,174,.14);
+    --danger:     #F0806F;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -8px rgba(0,0,0,.55);
+    --sel:        #34C0AE;
+  }
+
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--board);
+    color: var(--ink);
+    font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  #app { position: fixed; inset: 0; background: var(--board); }
+  /* canvas は置換要素なので inset:0 では伸びない。実寸を指定する */
+  #board { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #board:focus { outline: none; }
+
+  /* ---------- 浮遊パネル共通 ---------- */
+  .panel {
+    position: absolute;
+    background: var(--surface);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: var(--r-panel);
+    box-shadow: var(--shadow);
+    display: flex;
+    z-index: 10;
+  }
+
+  /* ---------- 銘 ---------- */
+  #mark {
+    position: absolute; top: 16px; left: 18px; z-index: 10;
+    display: flex; align-items: center; gap: 7px;
+    font-family: "DM Mono", ui-monospace, monospace;
+    font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted); user-select: none; pointer-events: none;
+  }
+  #mark i { width: 8px; height: 8px; background: var(--accent); border-radius: 2px; display: block; }
+
+  /* ---------- 左レール ---------- */
+  #rail {
+    top: 50%; left: 16px; transform: translateY(-50%);
+    flex-direction: column; padding: 6px; gap: 2px;
+  }
+  #rail .sep { height: 1px; background: var(--line-soft); margin: 5px 4px; }
+
+  .tbtn {
+    appearance: none; border: 0; background: transparent; color: var(--ink);
+    width: 40px; height: 40px; border-radius: var(--r-btn);
+    display: grid; place-items: center; position: relative;
+    cursor: pointer; padding: 0;
+    transition: background .12s ease, color .12s ease;
+  }
+  .tbtn:hover { background: var(--surface-2); }
+  .tbtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .tbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tbtn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .tbtn kbd {
+    position: absolute; right: 3px; bottom: 2px;
+    font-family: "DM Mono", ui-monospace, monospace; font-size: 8.5px;
+    color: var(--muted); opacity: .75;
+  }
+  .tbtn[aria-pressed="true"] kbd { color: var(--accent-ink); opacity: .6; }
+  .tbtn[disabled] { opacity: .3; cursor: default; }
+  .tbtn[disabled]:hover { background: transparent; }
+
+  /* ---------- インク / 太さ ---------- */
+  #inks {
+    top: 50%; left: 70px; transform: translateY(-50%);
+    flex-direction: column; padding: 8px; gap: 8px; align-items: center;
+  }
+  #inks[hidden] { display: none; }
+  .swatches { display: grid; grid-template-columns: repeat(2, 20px); gap: 7px; }
+  .sw {
+    width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,.14);
+    cursor: pointer; padding: 0; position: relative; transition: transform .1s ease;
+  }
+  .sw:hover { transform: scale(1.12); }
+  .sw[aria-pressed="true"]::after {
+    content: ""; position: absolute; inset: -4px;
+    border: 1.5px solid var(--accent); border-radius: 50%;
+  }
+  .sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .widths { display: flex; flex-direction: column; gap: 4px; align-items: center; padding-top: 2px; border-top: 1px solid var(--line-soft); width: 100%; }
+  .wbtn {
+    width: 34px; height: 22px; border: 0; background: transparent; border-radius: 6px;
+    cursor: pointer; display: grid; place-items: center; padding: 0;
+  }
+  .wbtn:hover { background: var(--surface-2); }
+  .wbtn span { display: block; width: 22px; border-radius: 99px; background: var(--ink); }
+  .wbtn[aria-pressed="true"] { background: var(--accent-soft); }
+  .wbtn[aria-pressed="true"] span { background: var(--accent); }
+  .wbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- 右上 操作 ---------- */
+  #acts { top: 16px; right: 16px; padding: 6px; gap: 2px; align-items: center; }
+  #acts .sep { width: 1px; align-self: stretch; background: var(--line-soft); margin: 5px 4px; }
+  .abtn {
+    appearance: none; border: 0; background: transparent; color: var(--ink);
+    height: 34px; padding: 0 11px; border-radius: var(--r-btn);
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+  }
+  .abtn:hover { background: var(--surface-2); }
+  .abtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .abtn[disabled] { opacity: .3; cursor: default; }
+  .abtn[disabled]:hover { background: transparent; }
+  .abtn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .abtn.icon { width: 34px; padding: 0; justify-content: center; }
+  .abtn.warn:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+  .abtn.primary { background: var(--accent); color: var(--accent-ink); }
+  .abtn.primary:hover { background: color-mix(in srgb, var(--accent) 86%, var(--ink)); }
+
+  /* ---------- 右下 ズーム ---------- */
+  #zoom { bottom: 16px; right: 16px; padding: 5px; gap: 1px; align-items: center; }
+  #zoomval {
+    font-family: "DM Mono", ui-monospace, monospace; font-size: 12px;
+    font-variant-numeric: tabular-nums; color: var(--muted);
+    min-width: 52px; text-align: center; background: none; border: 0; padding: 0;
+    cursor: pointer; letter-spacing: .02em;
+  }
+  #zoomval:hover { color: var(--ink); }
+
+  /* ---------- 左下 状態 ---------- */
+  #hint {
+    position: absolute; bottom: 20px; left: 18px; z-index: 10;
+    font-family: "DM Mono", ui-monospace, monospace; font-size: 10.5px;
+    color: var(--muted); user-select: none; pointer-events: none;
+    letter-spacing: .02em; opacity: .85;
+  }
+
+  /* ---------- 文字入力オーバーレイ ---------- */
+  #editor {
+    position: absolute; z-index: 20; display: none;
+    font-family: "Zen Kurenaido", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: transparent; border: 0; outline: 0; resize: none;
+    padding: 0; margin: 0; overflow: hidden; white-space: pre;
+    line-height: 1.35; caret-color: var(--accent);
+  }
+  #editor.note {
+    white-space: pre-wrap;
+    border-radius: 3px;
+  }
+
+  /* ---------- モーダル ---------- */
+  #veil {
+    position: absolute; inset: 0; z-index: 40; display: none;
+    background: color-mix(in srgb, var(--board) 62%, rgba(0,0,0,.5));
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    place-items: center; padding: 24px;
+  }
+  #veil.on { display: grid; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: var(--shadow);
+    padding: 22px 24px; max-width: 520px; width: 100%;
+  }
+  .card h2 {
+    margin: 0 0 6px; font-size: 15px; font-weight: 700; letter-spacing: .01em;
+    text-wrap: balance;
+  }
+  .card p { margin: 0; font-size: 13px; line-height: 1.7; color: var(--muted); }
+  .card .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+  .card img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; margin-top: 14px; background: #fff; }
+
+  .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 26px; margin-top: 14px; }
+  .keys div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--line-soft); font-size: 12.5px; }
+  .keys b { font-weight: 500; }
+  .keys kbd {
+    font-family: "DM Mono", ui-monospace, monospace; font-size: 11px;
+    color: var(--muted); background: var(--surface-2); border: 1px solid var(--line-soft);
+    border-radius: 5px; padding: 1px 6px; white-space: nowrap;
+  }
+  .keys .head {
+    grid-column: 1 / -1; border: 0; padding: 12px 0 2px;
+    font-family: "DM Mono", ui-monospace, monospace; font-size: 9.5px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+  }
+
+  #toast {
+    position: absolute; bottom: 20px; left: 50%; transform: translate(-50%, 14px);
+    z-index: 45; background: var(--ink); color: var(--board);
+    padding: 9px 16px; border-radius: 99px; font-size: 12.5px; font-weight: 500;
+    box-shadow: var(--shadow); opacity: 0; pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+
+  @media (max-height: 700px) {
+    .tbtn { width: 34px; height: 34px; }
+    .tbtn svg { width: 17px; height: 17px; }
+    .tbtn kbd { font-size: 8px; }
+    #rail .sep { margin: 3px 4px; }
+    #inks { left: 62px; }
+  }
+
+  @media (max-width: 720px) {
+    #acts .label { display: none; }
+    .abtn { padding: 0 9px; }
+    #hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="board" tabindex="-1"></canvas>
+
+  <div id="mark"><i></i>板書 / mtg board</div>
+
+  <div class="panel" id="rail"></div>
+
+  <div class="panel" id="inks">
+    <div class="swatches" id="swatches"></div>
+    <div class="widths" id="widths"></div>
+  </div>
+
+  <div class="panel" id="acts">
+    <button class="abtn icon" id="b-undo" title="元に戻す (⌘Z)" aria-label="元に戻す">
+      <svg viewBox="0 0 24 24"><path d="M4 9h11a5 5 0 0 1 0 10H9"/><path d="M8 5 4 9l4 4"/></svg>
+    </button>
+    <button class="abtn icon" id="b-redo" title="やり直す (⇧⌘Z)" aria-label="やり直す">
+      <svg viewBox="0 0 24 24"><path d="M20 9H9a5 5 0 0 0 0 10h6"/><path d="m16 5 4 4-4 4"/></svg>
+    </button>
+    <span class="sep"></span>
+    <button class="abtn warn" id="b-clear">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 12h10l1-12"/></svg>
+      <span class="label">全消し</span>
+    </button>
+    <button class="abtn primary" id="b-copy">
+      <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5H6a2 2 0 0 0-2 2v9"/></svg>
+      <span class="label">画像をコピー</span>
+    </button>
+  </div>
+
+  <div class="panel" id="zoom">
+    <button class="abtn icon" id="b-zout" title="縮小" aria-label="縮小">
+      <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>
+    </button>
+    <button id="zoomval" title="100% に戻す (0)">100%</button>
+    <button class="abtn icon" id="b-zin" title="拡大" aria-label="拡大">
+      <svg viewBox="0 0 24 24"><path d="M12 6v12"/><path d="M6 12h12"/></svg>
+    </button>
+    <button class="abtn icon" id="b-fit" title="全体を表示 (F)" aria-label="全体を表示">
+      <svg viewBox="0 0 24 24"><path d="M4 9V5h4"/><path d="M20 9V5h-4"/><path d="M4 15v4h4"/><path d="M20 15v4h-4"/></svg>
+    </button>
+    <button class="abtn icon" id="b-help" title="ショートカット (?)" aria-label="ショートカット">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.5v.3"/><path d="M12 17h.01"/></svg>
+    </button>
+  </div>
+
+  <div id="hint"></div>
+  <textarea id="editor" spellcheck="false"></textarea>
+  <div id="veil"></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     パレット（色は index で保存するので、テーマ切替でそのまま追従する）
+     ============================================================ */
+  var INK = {
+    light: ["#1F242B", "#D33F2A", "#1F5FA8", "#17806B", "#DE8408", "#7A4FB5"],
+    dark:  ["#E8EBEE", "#FF7A63", "#6EA8F0", "#4CC9A8", "#F5B342", "#B48BF0"]
+  };
+  var INK_NAME = ["墨", "朱", "藍", "碧", "橙", "菫"];
+  var NOTE = {
+    light: ["#FFE9A3", "#FFC9D4", "#BFE3F5", "#C9EFC2"],
+    dark:  ["#E0CB86", "#DFAAB5", "#A6C6D8", "#AFD0A9"]
+  };
+  var NOTE_NAME = ["黄", "桃", "空", "萌"];
+  var NOTE_TEXT = "#25292E";
+  var WIDTHS = [2.5, 5, 9];
+  var NOTE_W = 216, NOTE_PAD = 14, NOTE_FS = 17;
+
+  function dark() {
+    var t = document.documentElement.getAttribute("data-theme");
+    if (t === "dark") return true;
+    if (t === "light") return false;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function inkOf(i) { return (dark() ? INK.dark : INK.light)[i % 6]; }
+  function noteOf(i) { return (dark() ? NOTE.dark : NOTE.light)[i % 4]; }
+  function css(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  /* ============================================================
+     状態
+     ============================================================ */
+  var TOOLS = [
+    { id: "select", key: "v", label: "選択・移動", icon: '<path d="M5 3l6 16 2.2-6.8L20 10z"/>' },
+    { id: "pen",    key: "p", label: "ペン",       icon: '<path d="M4 20l3.5-.7 10-10a2.5 2.5 0 0 0-3.5-3.5l-10 10z"/><path d="M13.5 6.5 17.5 10.5"/>' },
+    { id: "eraser", key: "e", label: "消しゴム",   icon: '<path d="M8.5 19H20"/><path d="m5 15.5 5-5 5.5 5.5-4 4H7z"/><path d="m10.5 10.5 4-4a1.8 1.8 0 0 1 2.6 0l2.9 2.9a1.8 1.8 0 0 1 0 2.6l-4 4"/>' },
+    { id: "rect",   key: "r", label: "四角",       icon: '<rect x="4" y="6" width="16" height="12" rx="1.5"/>' },
+    { id: "ellipse",key: "o", label: "丸",         icon: '<ellipse cx="12" cy="12" rx="8" ry="6.5"/>' },
+    { id: "line",   key: "l", label: "直線",       icon: '<path d="M5 19 19 5"/>' },
+    { id: "arrow",  key: "a", label: "矢印",       icon: '<path d="M5 19 19 5"/><path d="M12 5h7v7"/>' },
+    { id: "text",   key: "t", label: "文字",       icon: '<path d="M5 6h14"/><path d="M12 6v13"/><path d="M9 19h6"/>' },
+    { id: "note",   key: "n", label: "付箋",       icon: '<path d="M5 5h14v9l-5 5H5z"/><path d="M19 14h-5v5"/>' },
+    { id: "laser",  key: "x", label: "レーザー",   icon: '<circle cx="12" cy="12" r="3"/><path d="M12 4V2M12 22v-2M4 12H2M22 12h-2M6 6 4.5 4.5M19.5 19.5 18 18M18 6l1.5-1.5M4.5 19.5 6 18"/>' }
+  ];
+  var DRAWS = { pen: 1, rect: 1, ellipse: 1, line: 1, arrow: 1, text: 1 };
+
+  var S = {
+    objs: [],
+    tool: "pen",
+    ink: 0,
+    w: 1,
+    note: 0,
+    zoom: 1, ox: 0, oy: 0,
+    sel: {},          // id -> true
+    undo: [], redo: []
+  };
+
+  var cv = document.getElementById("board");
+  var ctx = cv.getContext("2d");
+  var ed = document.getElementById("editor");
+  var W = 0, H = 0, DPR = 1;
+  var seq = 1;
+  function nid() { return "o" + (seq++) + "-" + (S.objs.length); }
+
+  /* ============================================================
+     座標変換
+     ============================================================ */
+  function toW(sx, sy) { return { x: (sx - S.ox) / S.zoom, y: (sy - S.oy) / S.zoom }; }
+  function toS(wx, wy) { return { x: wx * S.zoom + S.ox, y: wy * S.zoom + S.oy }; }
+
+  /* ============================================================
+     永続化
+     ============================================================ */
+  var KEY = "bansho.v1";
+  var saveT = null;
+  function save() {
+    if (saveT) clearTimeout(saveT);
+    saveT = setTimeout(function () {
+      try {
+        localStorage.setItem(KEY, JSON.stringify({ objs: S.objs, ox: S.ox, oy: S.oy, zoom: S.zoom }));
+      } catch (e) { /* 容量超過などは黙って諦める */ }
+    }, 400);
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var d = JSON.parse(raw);
+      if (d && Array.isArray(d.objs)) {
+        S.objs = d.objs;
+        if (typeof d.zoom === "number") S.zoom = clamp(d.zoom, 0.2, 4);
+        if (typeof d.ox === "number") S.ox = d.ox;
+        if (typeof d.oy === "number") S.oy = d.oy;
+        seq = S.objs.length + 1;
+      }
+    } catch (e) { /* 壊れていたら空の盤面で始める */ }
+  }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+
+  /* ============================================================
+     Undo / Redo
+     ============================================================ */
+  function snap() { return JSON.stringify(S.objs); }
+  function mark() { pushSnap(snap()); }
+  /* 変更前のスナップショットを積む。中身が変わっていなければ何もしない */
+  function pushSnap(before) {
+    if (before == null) return;
+    if (before === snap()) return;
+    S.undo.push(before);
+    if (S.undo.length > 60) S.undo.shift();
+    S.redo.length = 0;
+    syncActs();
+  }
+  function undo() {
+    if (!S.undo.length) return;
+    S.redo.push(JSON.stringify(S.objs));
+    S.objs = JSON.parse(S.undo.pop());
+    S.sel = {}; commitEditor(true); draw(); save(); syncActs();
+  }
+  function redo() {
+    if (!S.redo.length) return;
+    S.undo.push(JSON.stringify(S.objs));
+    S.objs = JSON.parse(S.redo.pop());
+    S.sel = {}; commitEditor(true); draw(); save(); syncActs();
+  }
+
+  /* ============================================================
+     UI 組み立て
+     ============================================================ */
+  var rail = document.getElementById("rail");
+  TOOLS.forEach(function (t, i) {
+    if (i === 3 || i === 7 || i === 9) {
+      var s = document.createElement("div"); s.className = "sep"; rail.appendChild(s);
+    }
+    var b = document.createElement("button");
+    b.className = "tbtn"; b.type = "button"; b.dataset.tool = t.id;
+    b.title = t.label + " (" + t.key.toUpperCase() + ")";
+    b.setAttribute("aria-label", t.label);
+    b.innerHTML = '<svg viewBox="0 0 24 24">' + t.icon + "</svg><kbd>" + t.key.toUpperCase() + "</kbd>";
+    b.addEventListener("click", function () { setTool(t.id); });
+    rail.appendChild(b);
+  });
+
+  var swWrap = document.getElementById("swatches");
+  var wWrap = document.getElementById("widths");
+  function buildSwatches() {
+    swWrap.innerHTML = "";
+    var isNote = S.tool === "note";
+    var n = isNote ? 4 : 6;
+    for (var i = 0; i < n; i++) {
+      (function (i) {
+        var b = document.createElement("button");
+        b.className = "sw"; b.type = "button";
+        b.style.background = isNote ? noteOf(i) : inkOf(i);
+        b.title = isNote ? NOTE_NAME[i] : INK_NAME[i] + " (" + (i + 1) + ")";
+        b.setAttribute("aria-label", b.title);
+        b.setAttribute("aria-pressed", String((isNote ? S.note : S.ink) === i));
+        b.addEventListener("click", function () {
+          if (isNote) S.note = i; else S.ink = i;
+          applySelColor(i, isNote);
+          buildSwatches();
+        });
+        swWrap.appendChild(b);
+      })(i);
+    }
+    swWrap.style.gridTemplateColumns = "repeat(2, 20px)";
+    wWrap.hidden = isNote;
+    wWrap.innerHTML = "";
+    if (isNote) return;
+    WIDTHS.forEach(function (w, i) {
+      var b = document.createElement("button");
+      b.className = "wbtn"; b.type = "button";
+      b.title = ["細", "中", "太"][i];
+      b.setAttribute("aria-label", "線の太さ: " + b.title);
+      b.setAttribute("aria-pressed", String(S.w === i));
+      b.innerHTML = '<span style="height:' + (i + 2) + 'px"></span>';
+      b.addEventListener("click", function () { S.w = i; buildSwatches(); });
+      wWrap.appendChild(b);
+    });
+  }
+
+  /* 選択中のオブジェクトがあれば色替えも即反映する */
+  function applySelColor(i, isNote) {
+    if (!Object.keys(S.sel).length) return;
+    var before = snap();
+    S.objs.forEach(function (o) {
+      if (!S.sel[o.id]) return;
+      if (isNote) { if (o.t === "note") o.n = i; }
+      else if (o.t !== "note") o.c = i;
+    });
+    pushSnap(before); draw(); save();
+  }
+
+  function setTool(id) {
+    commitEditor();
+    S.tool = id;
+    if (id !== "laser") laser = [];
+    if (id !== "select") S.sel = {};
+    Array.prototype.forEach.call(rail.querySelectorAll(".tbtn"), function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.tool === id));
+    });
+    document.getElementById("inks").hidden = (id === "eraser" || id === "select" || id === "laser");
+    cv.style.cursor =
+      id === "select" ? "default" :
+      id === "text" ? "text" :
+      id === "eraser" ? "cell" :
+      id === "laser" ? "none" : "crosshair";
+    buildSwatches();
+    syncHint();
+    draw();
+  }
+
+  function syncActs() {
+    document.getElementById("b-undo").disabled = !S.undo.length;
+    document.getElementById("b-redo").disabled = !S.redo.length;
+    document.getElementById("zoomval").textContent = Math.round(S.zoom * 100) + "%";
+  }
+  function syncHint() {
+    var t = TOOLS.filter(function (x) { return x.id === S.tool; })[0];
+    var extra = {
+      pen: "ドラッグで描く",
+      select: "クリックで選択 / ドラッグで移動 / Delete で削除",
+      eraser: "なぞった線を消す",
+      text: "クリックして入力 · ⌘Enter で確定",
+      note: "クリックで貼る",
+      laser: "画面共有中の指し棒（描かれません）"
+    }[S.tool] || "ドラッグで作図 / Shift で正方形・水平垂直";
+    document.getElementById("hint").textContent = t.label + " — " + extra + "　·　space+ドラッグで移動";
+  }
+
+  /* ============================================================
+     描画
+     ============================================================ */
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    draw();
+  }
+
+  var draft = null;      // 作図中のオブジェクト
+  var marquee = null;    // 範囲選択の矩形
+  var laser = [];        // レーザーの軌跡（screen 座標）
+
+  function draw() {
+    var boardBg = css("--board");
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = boardBg;
+    ctx.fillRect(0, 0, W, H);
+
+    grid();
+
+    ctx.save();
+    ctx.translate(S.ox, S.oy);
+    ctx.scale(S.zoom, S.zoom);
+    for (var i = 0; i < S.objs.length; i++) shape(S.objs[i]);
+    if (draft) shape(draft);
+    ctx.restore();
+
+    outlines();
+    if (marquee) {
+      ctx.save();
+      ctx.strokeStyle = css("--sel"); ctx.lineWidth = 1;
+      ctx.fillStyle = css("--accent-soft");
+      var r = norm(marquee);
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.strokeRect(r.x + .5, r.y + .5, r.w, r.h);
+      ctx.restore();
+    }
+    if (laser.length) laserDraw();
+  }
+
+  function grid() {
+    var step = 32 * S.zoom;
+    if (step < 11) return;
+    var a = clamp((S.zoom - 0.28) * 1.1, 0, 1) * 0.95;
+    ctx.save();
+    ctx.fillStyle = css("--grid"); ctx.globalAlpha = a;
+    var x0 = S.ox % step, y0 = S.oy % step;
+    var r = S.zoom > 1.6 ? 1.3 : 1.05;
+    for (var x = x0; x < W + step; x += step) {
+      for (var y = y0; y < H + step; y += step) {
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function shape(o) {
+    if (o.t === "note") { note(o); return; }
+    if (o.t === "text") { text(o); return; }
+    ctx.save();
+    ctx.strokeStyle = inkOf(o.c);
+    ctx.lineWidth = WIDTHS[o.w];
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    if (o.t === "path") {
+      var p = o.pts;
+      if (p.length < 4) {
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], WIDTHS[o.w] / 2, 0, 6.2832);
+        ctx.fillStyle = inkOf(o.c); ctx.fill();
+      } else {
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]);
+        for (var i = 2; i < p.length - 2; i += 2) {
+          ctx.quadraticCurveTo(p[i], p[i + 1], (p[i] + p[i + 2]) / 2, (p[i + 1] + p[i + 3]) / 2);
+        }
+        ctx.lineTo(p[p.length - 2], p[p.length - 1]);
+        ctx.stroke();
+      }
+    } else if (o.t === "rect") {
+      var r = norm({ x: o.x1, y: o.y1, w: o.x2 - o.x1, h: o.y2 - o.y1 });
+      var rad = Math.min(4, r.w / 2, r.h / 2);
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(r.x, r.y, r.w, r.h, rad);
+      else ctx.rect(r.x, r.y, r.w, r.h);
+      ctx.stroke();
+    } else if (o.t === "ellipse") {
+      ctx.beginPath();
+      ctx.ellipse((o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2,
+        Math.abs(o.x2 - o.x1) / 2, Math.abs(o.y2 - o.y1) / 2, 0, 0, 6.2832);
+      ctx.stroke();
+    } else if (o.t === "line" || o.t === "arrow") {
+      ctx.beginPath(); ctx.moveTo(o.x1, o.y1); ctx.lineTo(o.x2, o.y2); ctx.stroke();
+      if (o.t === "arrow") {
+        var ang = Math.atan2(o.y2 - o.y1, o.x2 - o.x1);
+        var len = Math.max(11, WIDTHS[o.w] * 3.2);
+        ctx.beginPath();
+        ctx.moveTo(o.x2 - len * Math.cos(ang - 0.42), o.y2 - len * Math.sin(ang - 0.42));
+        ctx.lineTo(o.x2, o.y2);
+        ctx.lineTo(o.x2 - len * Math.cos(ang + 0.42), o.y2 - len * Math.sin(ang + 0.42));
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function text(o) {
+    ctx.save();
+    ctx.fillStyle = inkOf(o.c);
+    ctx.font = o.s + 'px "Zen Kurenaido", "Hiragino Kaku Gothic ProN", sans-serif';
+    ctx.textBaseline = "top";
+    var lines = String(o.txt).split("\n");
+    for (var i = 0; i < lines.length; i++) ctx.fillText(lines[i], o.x, o.y + i * o.s * 1.35);
+    ctx.restore();
+  }
+
+  function wrap(txt, maxW, font) {
+    ctx.save(); ctx.font = font;
+    var out = [];
+    String(txt).split("\n").forEach(function (para) {
+      if (!para) { out.push(""); return; }
+      var line = "";
+      for (var i = 0; i < para.length; i++) {
+        var ch = para[i];
+        if (ctx.measureText(line + ch).width > maxW && line) { out.push(line); line = ch; }
+        else line += ch;
+      }
+      out.push(line);
+    });
+    ctx.restore();
+    return out;
+  }
+
+  function noteH(o) {
+    var font = NOTE_FS + 'px "Zen Kurenaido", "Hiragino Kaku Gothic ProN", sans-serif';
+    var lines = wrap(o.txt || "", NOTE_W - NOTE_PAD * 2, font);
+    return Math.max(96, lines.length * NOTE_FS * 1.5 + NOTE_PAD * 2);
+  }
+
+  function note(o) {
+    var h = noteH(o);
+    ctx.save();
+    ctx.shadowColor = "rgba(20,25,30,.20)";
+    ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+    ctx.fillStyle = noteOf(o.n);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(o.x, o.y, NOTE_W, h, 3);
+    else ctx.rect(o.x, o.y, NOTE_W, h);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(o.x, o.y, NOTE_W, h); ctx.clip();
+    ctx.fillStyle = NOTE_TEXT;
+    var font = NOTE_FS + 'px "Zen Kurenaido", "Hiragino Kaku Gothic ProN", sans-serif';
+    ctx.font = font; ctx.textBaseline = "top";
+    var lines = wrap(o.txt || "", NOTE_W - NOTE_PAD * 2, font);
+    for (var i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], o.x + NOTE_PAD, o.y + NOTE_PAD + i * NOTE_FS * 1.5);
+    }
+    ctx.restore();
+  }
+
+  function outlines() {
+    var ids = Object.keys(S.sel);
+    if (!ids.length) return;
+    ctx.save();
+    ctx.strokeStyle = css("--sel"); ctx.lineWidth = 1.25;
+    ctx.setLineDash([4, 3]);
+    S.objs.forEach(function (o) {
+      if (!S.sel[o.id]) return;
+      var b = bbox(o);
+      var a = toS(b.x, b.y), c = toS(b.x + b.w, b.y + b.h);
+      ctx.strokeRect(a.x - 4.5, a.y - 4.5, (c.x - a.x) + 9, (c.y - a.y) + 9);
+    });
+    ctx.restore();
+  }
+
+  function laserDraw() {
+    ctx.save();
+    var col = dark() ? "#FF6B57" : "#E0341C";
+    for (var i = 1; i < laser.length; i++) {
+      var p = laser[i - 1], q = laser[i];
+      var age = (performance.now() - q.t) / 900;
+      if (age > 1) continue;
+      ctx.globalAlpha = (1 - age) * 0.85;
+      ctx.strokeStyle = col; ctx.lineWidth = 4.5 * (1 - age * .5);
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+    }
+    var last = laser[laser.length - 1];
+    if (last && performance.now() - last.t < 400) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(last.x, last.y, 6, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = .25;
+      ctx.beginPath(); ctx.arc(last.x, last.y, 13, 0, 6.2832); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  var laserRAF = 0;
+  function laserLoop() {
+    laser = laser.filter(function (p) { return performance.now() - p.t < 950; });
+    draw();
+    if (laser.length) laserRAF = requestAnimationFrame(laserLoop);
+    else laserRAF = 0;
+  }
+
+  /* ============================================================
+     幾何 / 当たり判定
+     ============================================================ */
+  function norm(r) {
+    return {
+      x: r.w < 0 ? r.x + r.w : r.x, y: r.h < 0 ? r.y + r.h : r.y,
+      w: Math.abs(r.w), h: Math.abs(r.h)
+    };
+  }
+  function bbox(o) {
+    if (o.t === "path") {
+      var p = o.pts, x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+      for (var i = 0; i < p.length; i += 2) {
+        if (p[i] < x1) x1 = p[i]; if (p[i] > x2) x2 = p[i];
+        if (p[i + 1] < y1) y1 = p[i + 1]; if (p[i + 1] > y2) y2 = p[i + 1];
+      }
+      var pad = WIDTHS[o.w] / 2;
+      return { x: x1 - pad, y: y1 - pad, w: (x2 - x1) + pad * 2, h: (y2 - y1) + pad * 2 };
+    }
+    if (o.t === "note") return { x: o.x, y: o.y, w: NOTE_W, h: noteH(o) };
+    if (o.t === "text") {
+      ctx.save();
+      ctx.font = o.s + 'px "Zen Kurenaido", sans-serif';
+      var lines = String(o.txt).split("\n"), w = 0;
+      lines.forEach(function (l) { w = Math.max(w, ctx.measureText(l).width); });
+      ctx.restore();
+      return { x: o.x, y: o.y, w: Math.max(w, 8), h: lines.length * o.s * 1.35 };
+    }
+    return norm({ x: o.x1, y: o.y1, w: o.x2 - o.x1, h: o.y2 - o.y1 });
+  }
+  function inBox(b, p, slack) {
+    slack = slack || 0;
+    return p.x >= b.x - slack && p.x <= b.x + b.w + slack &&
+           p.y >= b.y - slack && p.y <= b.y + b.h + slack;
+  }
+  function segDist(px, py, x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1;
+    var l = dx * dx + dy * dy;
+    var t = l ? clamp(((px - x1) * dx + (py - y1) * dy) / l, 0, 1) : 0;
+    var qx = x1 + t * dx, qy = y1 + t * dy;
+    return Math.hypot(px - qx, py - qy);
+  }
+  /* 見た目に忠実な当たり判定（線は線の近く、付箋・文字は面） */
+  function hit(o, p, slack) {
+    slack = (slack || 0) + WIDTHS[o.w || 0] / 2 + 4 / S.zoom;
+    if (o.t === "note" || o.t === "text") return inBox(bbox(o), p, 2 / S.zoom);
+    if (o.t === "path") {
+      var q = o.pts;
+      if (q.length === 2) return Math.hypot(p.x - q[0], p.y - q[1]) <= slack;
+      for (var i = 0; i < q.length - 2; i += 2) {
+        if (segDist(p.x, p.y, q[i], q[i + 1], q[i + 2], q[i + 3]) <= slack) return true;
+      }
+      return false;
+    }
+    if (o.t === "line" || o.t === "arrow") return segDist(p.x, p.y, o.x1, o.y1, o.x2, o.y2) <= slack;
+    var b = bbox(o);
+    if (o.t === "rect") {
+      if (!inBox(b, p, slack)) return false;
+      var inner = (p.x > b.x + slack && p.x < b.x + b.w - slack && p.y > b.y + slack && p.y < b.y + b.h - slack);
+      return !inner;
+    }
+    if (o.t === "ellipse") {
+      var cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+      var rx = Math.max(b.w / 2, .001), ry = Math.max(b.h / 2, .001);
+      var d = Math.hypot((p.x - cx) / rx, (p.y - cy) / ry);
+      var tol = slack / Math.min(rx, ry);
+      return Math.abs(d - 1) <= tol + .04;
+    }
+    return inBox(b, p, slack);
+  }
+  function topAt(p) {
+    for (var i = S.objs.length - 1; i >= 0; i--) if (hit(S.objs[i], p)) return S.objs[i];
+    return null;
+  }
+  function moveObj(o, dx, dy) {
+    if (o.t === "path") { for (var i = 0; i < o.pts.length; i += 2) { o.pts[i] += dx; o.pts[i + 1] += dy; } }
+    else if (o.t === "note" || o.t === "text") { o.x += dx; o.y += dy; }
+    else { o.x1 += dx; o.y1 += dy; o.x2 += dx; o.y2 += dy; }
+  }
+
+  /* ============================================================
+     ポインタ操作
+     ============================================================ */
+  var mode = null;   // draw | pan | move | marquee | erase | laser
+  var start = null, last = null, movedAny = false, spaceDown = false;
+  var opSnap = null; // 操作開始時のスナップショット
+
+  cv.addEventListener("pointerdown", function (e) {
+    if (e.button === 2) return;
+    /* 既定動作を止めないと、文字入力欄に当てたフォーカスを直後に奪われる */
+    e.preventDefault();
+    commitEditor();
+    cv.setPointerCapture(e.pointerId);
+    var sp = { x: e.offsetX, y: e.offsetY };
+    var p = toW(sp.x, sp.y);
+    start = { s: sp, w: p }; last = { s: sp, w: p }; movedAny = false;
+
+    if (spaceDown || e.button === 1) { mode = "pan"; cv.style.cursor = "grabbing"; return; }
+
+    var t = S.tool;
+
+    if (t === "laser") { mode = "laser"; laser = [{ x: sp.x, y: sp.y, t: performance.now() }]; if (!laserRAF) laserLoop(); return; }
+
+    if (t === "eraser") { mode = "erase"; opSnap = snap(); erase(p); return; }
+
+    if (t === "select") {
+      var o = topAt(p);
+      if (o) {
+        if (!S.sel[o.id]) { if (!e.shiftKey) S.sel = {}; S.sel[o.id] = true; }
+        else if (e.shiftKey) { delete S.sel[o.id]; draw(); return; }
+        mode = "move"; opSnap = snap();
+      } else {
+        if (!e.shiftKey) S.sel = {};
+        mode = "marquee"; marquee = { x: sp.x, y: sp.y, w: 0, h: 0 };
+      }
+      draw();
+      return;
+    }
+
+    if (t === "text") {
+      var ex = topAt(p);
+      if (ex && ex.t === "text") { openEditor(ex, snap()); return; }
+      var before = snap();
+      var o2 = { id: nid(), t: "text", c: S.ink, s: 24, x: p.x, y: p.y - 12, txt: "" };
+      S.objs.push(o2); openEditor(o2, before);
+      return;
+    }
+
+    if (t === "note") {
+      var exn = topAt(p);
+      if (exn && exn.t === "note") { openEditor(exn, snap()); return; }
+      var beforeN = snap();
+      var o3 = { id: nid(), t: "note", n: S.note, x: p.x - NOTE_W / 2, y: p.y - 48, txt: "" };
+      S.objs.push(o3); openEditor(o3, beforeN);
+      return;
+    }
+
+    mode = "draw";
+    if (t === "pen") draft = { id: nid(), t: "path", c: S.ink, w: S.w, pts: [p.x, p.y] };
+    else draft = { id: nid(), t: t, c: S.ink, w: S.w, x1: p.x, y1: p.y, x2: p.x, y2: p.y };
+    draw();
+  });
+
+  cv.addEventListener("pointermove", function (e) {
+    var sp = { x: e.offsetX, y: e.offsetY };
+    var p = toW(sp.x, sp.y);
+
+    /* レーザーはボタンを押さなくてもカーソルを追う */
+    if (S.tool === "laser" && mode !== "pan") {
+      laser.push({ x: sp.x, y: sp.y, t: performance.now() });
+      if (laser.length > 90) laser.shift();
+      if (!laserRAF) laserLoop();
+      last = { s: sp, w: p };
+      return;
+    }
+    if (!mode) return;
+    if (Math.abs(sp.x - start.s.x) + Math.abs(sp.y - start.s.y) > 2) movedAny = true;
+
+    if (mode === "pan") {
+      S.ox += sp.x - last.s.x; S.oy += sp.y - last.s.y;
+      last = { s: sp, w: p }; draw(); save(); return;
+    }
+    if (mode === "erase") { erase(p); last = { s: sp, w: p }; return; }
+    if (mode === "marquee") {
+      marquee.w = sp.x - marquee.x; marquee.h = sp.y - marquee.y;
+      var r = norm(marquee);
+      var a = toW(r.x, r.y), b = toW(r.x + r.w, r.y + r.h);
+      S.sel = {};
+      S.objs.forEach(function (o) {
+        var bb = bbox(o);
+        if (bb.x < b.x && bb.x + bb.w > a.x && bb.y < b.y && bb.y + bb.h > a.y) S.sel[o.id] = true;
+      });
+      draw(); return;
+    }
+    if (mode === "move") {
+      var dx = p.x - last.w.x, dy = p.y - last.w.y;
+      S.objs.forEach(function (o) { if (S.sel[o.id]) moveObj(o, dx, dy); });
+      last = { s: sp, w: p }; draw(); return;
+    }
+    if (mode === "draw") {
+      if (draft.t === "path") {
+        var n = draft.pts.length;
+        if (Math.hypot(p.x - draft.pts[n - 2], p.y - draft.pts[n - 1]) * S.zoom > 1.4) draft.pts.push(p.x, p.y);
+      } else {
+        draft.x2 = p.x; draft.y2 = p.y;
+        if (e.shiftKey) {
+          if (draft.t === "rect" || draft.t === "ellipse") {
+            var s = Math.max(Math.abs(draft.x2 - draft.x1), Math.abs(draft.y2 - draft.y1));
+            draft.x2 = draft.x1 + Math.sign(draft.x2 - draft.x1 || 1) * s;
+            draft.y2 = draft.y1 + Math.sign(draft.y2 - draft.y1 || 1) * s;
+          } else {
+            if (Math.abs(draft.x2 - draft.x1) > Math.abs(draft.y2 - draft.y1)) draft.y2 = draft.y1;
+            else draft.x2 = draft.x1;
+          }
+        }
+      }
+      last = { s: sp, w: p }; draw(); return;
+    }
+  });
+
+  function endPointer() {
+    if (mode === "draw" && draft) {
+      var keep = true;
+      if (draft.t !== "path") {
+        keep = Math.hypot(draft.x2 - draft.x1, draft.y2 - draft.y1) * S.zoom > 4;
+      }
+      if (keep) { mark(); S.objs.push(draft); }
+      draft = null; save();
+    }
+    if (mode === "move" || mode === "erase") { pushSnap(opSnap); opSnap = null; save(); }
+    if (mode === "marquee") marquee = null;
+    if (mode === "pan") setTool(S.tool);
+    if (mode === "laser") { /* 軌跡は自然に消える */ }
+    mode = null;
+    syncActs(); draw();
+  }
+  cv.addEventListener("pointerup", endPointer);
+  cv.addEventListener("pointercancel", endPointer);
+  cv.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+  function erase(p) {
+    var before = S.objs.length;
+    S.objs = S.objs.filter(function (o) { return !hit(o, p, 3 / S.zoom); });
+    if (S.objs.length !== before) draw();
+  }
+
+  /* ホイール: そのままでスクロール移動、⌘/Ctrl（トラックパッドのピンチ）で拡大縮小 */
+  cv.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      zoomAt(e.offsetX, e.offsetY, Math.pow(0.995, e.deltaY));
+    } else {
+      S.ox -= e.deltaX; S.oy -= e.deltaY;
+      draw(); save();
+    }
+  }, { passive: false });
+
+  function zoomAt(sx, sy, k) {
+    var z = clamp(S.zoom * k, 0.2, 4);
+    var f = z / S.zoom;
+    S.ox = sx - (sx - S.ox) * f;
+    S.oy = sy - (sy - S.oy) * f;
+    S.zoom = z;
+    positionEditor();
+    draw(); save(); syncActs();
+  }
+
+  function fit() {
+    if (!S.objs.length) { S.zoom = 1; S.ox = 0; S.oy = 0; draw(); save(); syncActs(); return; }
+    var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    S.objs.forEach(function (o) {
+      var b = bbox(o);
+      x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y);
+      x2 = Math.max(x2, b.x + b.w); y2 = Math.max(y2, b.y + b.h);
+    });
+    var pad = 80;
+    var z = clamp(Math.min((W - pad * 2) / Math.max(x2 - x1, 1), (H - pad * 2) / Math.max(y2 - y1, 1)), 0.2, 2);
+    S.zoom = z;
+    S.ox = W / 2 - ((x1 + x2) / 2) * z;
+    S.oy = H / 2 - ((y1 + y2) / 2) * z;
+    draw(); save(); syncActs();
+  }
+
+  /* ============================================================
+     文字 / 付箋の入力
+     ============================================================ */
+  var editing = null, preSnap = null;
+
+  function openEditor(o, before) {
+    editing = o; preSnap = before || null;
+    ed.value = o.txt || "";
+    ed.className = (o.t === "note") ? "note" : "";
+    ed.style.display = "block";
+    positionEditor();
+    ed.focus();
+    ed.setSelectionRange(ed.value.length, ed.value.length);
+    draw();
+  }
+
+  function positionEditor() {
+    if (!editing) return;
+    var o = editing;
+    var p = toS(o.x, o.y);
+    if (o.t === "note") {
+      var h = noteH(o);
+      ed.style.left = (p.x + NOTE_PAD * S.zoom) + "px";
+      ed.style.top = (p.y + NOTE_PAD * S.zoom) + "px";
+      ed.style.width = ((NOTE_W - NOTE_PAD * 2) * S.zoom) + "px";
+      ed.style.height = ((h - NOTE_PAD * 2) * S.zoom) + "px";
+      ed.style.fontSize = (NOTE_FS * S.zoom) + "px";
+      ed.style.lineHeight = "1.5";
+      ed.style.color = NOTE_TEXT;
+    } else {
+      ed.style.left = p.x + "px";
+      ed.style.top = p.y + "px";
+      ed.style.fontSize = (o.s * S.zoom) + "px";
+      ed.style.lineHeight = "1.35";
+      ed.style.color = inkOf(o.c);
+      autoSize();
+    }
+  }
+
+  function autoSize() {
+    if (!editing || editing.t === "note") return;
+    ctx.save();
+    ctx.font = editing.s + 'px "Zen Kurenaido", sans-serif';
+    var lines = ed.value.split("\n"), w = 0;
+    lines.forEach(function (l) { w = Math.max(w, ctx.measureText(l || " ").width); });
+    ctx.restore();
+    ed.style.width = Math.max((w + 12) * S.zoom, 40) + "px";
+    ed.style.height = (lines.length * editing.s * 1.35 * S.zoom + 4) + "px";
+  }
+
+  ed.addEventListener("input", function () {
+    if (!editing) return;
+    editing.txt = ed.value;
+    if (editing.t === "note") { positionEditor(); }
+    else autoSize();
+    draw();
+  });
+  ed.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.preventDefault(); commitEditor(); cv.focus(); }
+    else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commitEditor(); cv.focus(); }
+    e.stopPropagation();
+  });
+  ed.addEventListener("blur", function () { commitEditor(); });
+
+  function commitEditor(silent) {
+    if (!editing) return;
+    var o = editing, before = preSnap;
+    editing = null; preSnap = null;
+    ed.style.display = "none"; ed.value = "";
+    if (document.activeElement === ed) ed.blur();
+    o.txt = (o.txt || "").replace(/\s+$/, "");
+    if (!o.txt.trim()) {
+      S.objs = S.objs.filter(function (x) { return x.id !== o.id; });
+    }
+    if (!silent) pushSnap(before);
+    save(); syncActs(); draw();
+  }
+
+  /* ============================================================
+     キーボード
+     ============================================================ */
+  window.addEventListener("keydown", function (e) {
+    if (e.target === ed) return;
+    var meta = e.metaKey || e.ctrlKey;
+
+    if (e.code === "Space" && !spaceDown) {
+      spaceDown = true;
+      if (!mode) cv.style.cursor = "grab";
+      e.preventDefault(); return;
+    }
+    if (meta && (e.key === "z" || e.key === "Z")) {
+      e.preventDefault(); e.shiftKey ? redo() : undo(); return;
+    }
+    if (meta && (e.key === "y")) { e.preventDefault(); redo(); return; }
+    if (meta && (e.key === "a")) {
+      e.preventDefault(); setTool("select");
+      S.objs.forEach(function (o) { S.sel[o.id] = true; }); draw(); return;
+    }
+    if (meta && (e.key === "c")) { e.preventDefault(); copyImage(); return; }
+    if (meta) return;
+
+    if (e.key === "Delete" || e.key === "Backspace") {
+      var ids = Object.keys(S.sel);
+      if (ids.length) {
+        e.preventDefault(); mark();
+        S.objs = S.objs.filter(function (o) { return !S.sel[o.id]; });
+        S.sel = {}; draw(); save();
+      }
+      return;
+    }
+    if (e.key === "Escape") { S.sel = {}; closeVeil(); draw(); return; }
+    if (e.key === "0") { zoomAt(W / 2, H / 2, 1 / S.zoom); return; }
+    if (e.key === "f" || e.key === "F") { fit(); return; }
+    if (e.key === "?" || e.key === "/") { e.preventDefault(); help(); return; }
+    if (e.key >= "1" && e.key <= "6") {
+      var i = parseInt(e.key, 10) - 1;
+      if (S.tool === "note") { if (i < 4) { S.note = i; applySelColor(i, true); } }
+      else { S.ink = i; applySelColor(i, false); }
+      buildSwatches(); return;
+    }
+    var t = TOOLS.filter(function (x) { return x.key === e.key.toLowerCase(); })[0];
+    if (t) { setTool(t.id); return; }
+  });
+  window.addEventListener("keyup", function (e) {
+    if (e.target === ed) return;
+    if (e.code === "Space") { spaceDown = false; if (!mode) setTool(S.tool); }
+  });
+
+  /* ============================================================
+     画像として書き出す
+     ============================================================ */
+  function render(scale) {
+    var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    S.objs.forEach(function (o) {
+      var b = bbox(o);
+      x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y);
+      x2 = Math.max(x2, b.x + b.w); y2 = Math.max(y2, b.y + b.h);
+    });
+    if (!isFinite(x1)) return null;
+    var pad = 40;
+    x1 -= pad; y1 -= pad; x2 += pad; y2 += pad;
+    var w = Math.min(x2 - x1, 8000), h = Math.min(y2 - y1, 8000);
+
+    var oc = document.createElement("canvas");
+    oc.width = Math.round(w * scale); oc.height = Math.round(h * scale);
+    var octx = oc.getContext("2d");
+
+    // 一時的に描画先を差し替える
+    var real = ctx, realZ = S.zoom, realOx = S.ox, realOy = S.oy;
+    ctx = octx;
+    octx.setTransform(scale, 0, 0, scale, 0, 0);
+    octx.fillStyle = css("--board");
+    octx.fillRect(0, 0, w, h);
+    octx.translate(-x1, -y1);
+    S.objs.forEach(function (o) { shape(o); });
+    ctx = real; S.zoom = realZ; S.ox = realOx; S.oy = realOy;
+    return oc;
+  }
+
+  function copyImage() {
+    var oc = render(2);
+    if (!oc) { toast("盤面が空です"); return; }
+    oc.toBlob(function (blob) {
+      if (!blob) { toast("画像の生成に失敗しました"); return; }
+      var ok = window.ClipboardItem && navigator.clipboard && navigator.clipboard.write;
+      if (!ok) { showImage(oc); return; }
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
+        .then(function () { toast("コピーしました — ⌘V で貼り付け"); })
+        .catch(function () { showImage(oc); });
+    }, "image/png");
+  }
+
+  /* ============================================================
+     モーダル・トースト
+     ============================================================ */
+  var veil = document.getElementById("veil");
+  function closeVeil() { veil.classList.remove("on"); veil.innerHTML = ""; }
+  veil.addEventListener("pointerdown", function (e) { if (e.target === veil) closeVeil(); });
+
+  function card(html) {
+    veil.innerHTML = '<div class="card">' + html + "</div>";
+    veil.classList.add("on");
+    return veil.firstChild;
+  }
+
+  function confirmClear() {
+    var n = S.objs.length;
+    if (!n) { toast("盤面はすでに空です"); return; }
+    var c = card(
+      "<h2>盤面をすべて消しますか</h2>" +
+      "<p>" + n + " 個の要素を消します。消したあとでも ⌘Z で元に戻せます。</p>" +
+      '<div class="row">' +
+      '<button class="abtn" id="c-no">やめる</button>' +
+      '<button class="abtn primary" id="c-yes">全部消す</button>' +
+      "</div>"
+    );
+    c.querySelector("#c-no").onclick = closeVeil;
+    c.querySelector("#c-yes").onclick = function () {
+      mark(); S.objs = []; S.sel = {}; closeVeil(); draw(); save(); toast("消しました");
+    };
+    c.querySelector("#c-yes").focus();
+  }
+
+  function showImage(oc) {
+    var c = card(
+      "<h2>画像ができました</h2>" +
+      "<p>この環境では自動コピーが使えないため、画像を表示しています。右クリック（または長押し）から「画像をコピー」「名前を付けて保存」を選んでください。</p>" +
+      '<img alt="盤面の書き出し" src="' + oc.toDataURL("image/png") + '">' +
+      '<div class="row"><button class="abtn primary" id="c-ok">閉じる</button></div>'
+    );
+    c.querySelector("#c-ok").onclick = closeVeil;
+  }
+
+  function help() {
+    var rows = [
+      ["head", "道具"],
+      ["V", "選択・移動"], ["P", "ペン"],
+      ["E", "消しゴム"], ["T", "文字"],
+      ["R / O", "四角 / 丸"], ["L / A", "直線 / 矢印"],
+      ["N", "付箋"], ["X", "レーザーポインタ"],
+      ["1 – 6", "インクの色"], ["Shift+ドラッグ", "正方形・水平垂直"],
+      ["head", "盤面"],
+      ["space+ドラッグ", "盤面を動かす"], ["ホイール / 2本指", "上下左右に移動"],
+      ["⌘+ホイール / ピンチ", "拡大・縮小"], ["0 / F", "100% / 全体表示"],
+      ["head", "編集"],
+      ["⌘Z / ⇧⌘Z", "元に戻す / やり直す"], ["⌘A", "すべて選択"],
+      ["Delete", "選択したものを削除"], ["⌘C", "盤面を画像でコピー"],
+      ["⌘Enter", "文字入力を確定"], ["?", "このヘルプ"]
+    ];
+    var html = "<h2>ショートカット</h2><p>盤面は自動保存されます。タブを閉じても次に開いたとき続きから使えます。</p>" +
+      '<div class="keys">';
+    rows.forEach(function (r) {
+      if (r[0] === "head") { html += '<div class="head">' + r[1] + "</div>"; return; }
+      html += "<div><b>" + r[1] + "</b><kbd>" + r[0] + "</kbd></div>";
+    });
+    html += '</div><div class="row"><button class="abtn primary" id="c-ok">閉じる</button></div>';
+    var c = card(html);
+    c.querySelector("#c-ok").onclick = closeVeil;
+    c.querySelector("#c-ok").focus();
+  }
+
+  var toastT = null;
+  function toast(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg; el.classList.add("on");
+    if (toastT) clearTimeout(toastT);
+    toastT = setTimeout(function () { el.classList.remove("on"); }, 2200);
+  }
+
+  /* ============================================================
+     配線
+     ============================================================ */
+  document.getElementById("b-undo").onclick = undo;
+  document.getElementById("b-redo").onclick = redo;
+  document.getElementById("b-clear").onclick = confirmClear;
+  document.getElementById("b-copy").onclick = copyImage;
+  document.getElementById("b-zin").onclick = function () { zoomAt(W / 2, H / 2, 1.2); };
+  document.getElementById("b-zout").onclick = function () { zoomAt(W / 2, H / 2, 1 / 1.2); };
+  document.getElementById("b-fit").onclick = fit;
+  document.getElementById("b-help").onclick = help;
+  document.getElementById("zoomval").onclick = function () { zoomAt(W / 2, H / 2, 1 / S.zoom); };
+
+  window.addEventListener("resize", resize);
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", draw);
+    else if (mq.addListener) mq.addListener(draw);
+  }
+  new MutationObserver(function () { draw(); })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  load();
+  setTool(S.objs.length ? "select" : "pen");
+  resize();
+  syncActs();
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { draw(); });
+  if (!S.objs.length) toast("ペンで描けます — ? でショートカット一覧");
+})();
+</script>
+</body>
+</html>
