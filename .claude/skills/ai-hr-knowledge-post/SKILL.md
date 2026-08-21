@@ -170,18 +170,26 @@ WebSearch を複数クエリで実行し、候補を集める：
 python3 - "$DRAFT" <<'PY'
 import re, sys
 t = open(sys.argv[1]).read()
-# 太字の閉じ記号の直前1文字が仮名・漢字・英数字以外なら壊れる
-bad = [m.group(0) for m in re.finditer(r'.{12}\*\*', t)
-       if not re.match(r'[\wぁ-んァ-ン一-龥ー]', m.group(0)[-3])]
-print('BOLD NG:', bad or 'none')
+pos = [m.start() for m in re.finditer(r'\*\*', t)]
+print('markers:', len(pos), '← 奇数なら対応が壊れている' if len(pos) % 2 else '(balanced)')
+ng = [(t[p-1], t[max(0,p-24):p+2]) for i, p in enumerate(pos)
+      if i % 2 == 1 and not re.match(r'[\wぁ-んァ-ン一-龥ー]', t[p-1])]
+for prev, ctx in ng:
+    print('CLOSE NG  prev=%r  ...%s' % (prev, ctx))
+print('CLOSE NG total:', len(ng))
 print('BARE URL:', re.findall(r'(?<!\()https?://\S+', t) or 'none')
 PY
 ```
 
-- `BOLD NG` に出た箇所は、太字範囲に語を足して仮名・漢字・英字で閉じるよう直す
-  （開き `**` も同じ正規表現に引っかかるので、閉じ側かどうかは前後を見て判断する）
+マーカーを出現順に並べ、偶数番目（＝閉じ側）だけを判定する。開き側は句読点の直後で
+正常なので、まとめて見ると誤検知だらけになる（一度それで判断を誤った）。
+
+- `markers` が奇数なら太字の対応が崩れている。まずそれを直す
+- `CLOSE NG` に出た箇所は、太字範囲に語を足して仮名・漢字・英字で閉じるよう直す
 - `BARE URL` に出たものは `[タイトル](URL)` に直す
 - 最後に、見出し記号（`:sunny:` `:tv:` `:memo:`）と日付が揃っているかを見る
+
+この手順を通した回（2026/08/21）は、太字17箇所すべてが正常に変換された。
 
 - 投稿後に `slack_read_channel`（limit: 1）で自分の投稿を読み直し、リンクが `<URL|タイトル>` 形式に正しく変換されているか・本文が壊れていないかを確認する。
   - **リンクが壊れている／本文がリンク記法に巻き込まれている場合は修正版を投稿し直す**
