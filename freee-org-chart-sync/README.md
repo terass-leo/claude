@@ -33,6 +33,7 @@ freee人事労務 API ──(OAuth2 / 毎日06:00 JST)──▶ GAS (このプ�
 | `Notify.gs` | Slack Incoming Webhook 通知 |
 | `Main.gs` | エントリポイント `syncOrgChart()` / トリガー設定 / メニュー |
 | `test/run-tests.js` | 純粋関数の node テスト（`node test/run-tests.js`） |
+| `dist/Code.gs` | 上記9ファイルを結合した1ファイル版（GASへの貼り付けを1回で済ませたいとき用。`./build-single-file.sh` で再生成） |
 
 ---
 
@@ -47,7 +48,9 @@ freee人事労務 API ──(OAuth2 / 毎日06:00 JST)──▶ GAS (このプ�
 
 ### Step 2: スプレッドシートと GAS プロジェクトを作成
 1. 出力先のスプレッドシートを新規作成（例: `【HR】組織図_freee連携`）
-2. メニュー **拡張機能 → Apps Script** を開き、このフォルダ内の `.gs` ファイルをすべて貼り付ける（ファイル名も同じにすると読みやすい）
+2. メニュー **拡張機能 → Apps Script** を開き、コードを貼り付ける
+   - **かんたん**: `dist/Code.gs` の中身をまるごと `コード.gs` に貼り付け（1ファイル版）
+   - **保守しやすい**: 各 `.gs` を同名のファイルとして個別に貼り付け
    - `appsscript.json` はプロジェクト設定で「マニフェストを表示」にチェックを入れてから上書き（タイムゾーン `Asia/Tokyo` と V8 が設定される）
    - clasp を使う場合は `clasp push` でまとめて反映可
 3. **プロジェクトの設定 → スクリプトプロパティ** に以下を登録
