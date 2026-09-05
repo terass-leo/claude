@@ -36,9 +36,12 @@ Apps Script 一式で完結させる社内向け強み診断です。
 
 1. 新しい Google スプレッドシートを作成する（このシートが以降の母艦になる）
 2. 「拡張機能 → Apps Script」を開く
-3. `gas/` 配下の `.gs` ファイルを同じ名前でスクリプトエディタに作成し、内容を貼り付ける
-   - `00_Config.gs` `01_Themes.gs` `02_Items.gs` `03_Scoring.gs` `04_Setup.gs` `05_Report.gs` `06_Main.gs` `07_Test.gs`
-   - `appsscript.json` はエディタの「プロジェクトの設定 → 『appsscript.json』マニフェスト ファイルをエディタで表示する」をオンにすると編集できる
+3. コードを貼り付ける。次のどちらでもよい。
+   - **かんたん（推奨）**: `dist/strengths-all-in-one.gs` の中身を、最初からある「コード.gs」に全文貼り付ける（1回で完了）
+   - **分割**: `gas/` 配下の `.gs` を同じ名前でファイル作成して個別に貼る（あとで編集しやすい）
+
+権限（スコープ）は初回実行時に自動で判定されるため、`appsscript.json` の設定は必須ではありません。
+明示的に固定したい場合のみ、エディタの「プロジェクトの設定 → 『appsscript.json』マニフェスト ファイルをエディタで表示する」をオンにして `gas/appsscript.json` の内容を貼ってください。
 
 > `clasp` を使う場合は `gas/` をそのまま `clasp push` すれば同じ状態になります。
 
@@ -140,6 +143,7 @@ Claudeには「与えられた辞書と順位以外の事実を創作しない�
 
 ```bash
 node tools/gen-docs.js   # docs/theme-dictionary.md と docs/items.md を更新
+node tools/bundle.js     # dist/strengths-all-in-one.gs を更新
 node tools/verify.js     # 採点ロジックのセルフテストをローカルで実行
 ```
 
@@ -162,7 +166,10 @@ strengths/
 ├── docs/
 │   ├── theme-dictionary.md 12テーマの定義（.gsから自動生成）
 │   └── items.md            全60設問（.gsから自動生成）
+├── dist/
+│   └── strengths-all-in-one.gs  gas/ を1本に結合した貼り付け用（自動生成）
 └── tools/
     ├── verify.js           採点ロジックのローカル検証
-    └── gen-docs.js         docs/ の再生成
+    ├── gen-docs.js         docs/ の再生成
+    └── bundle.js           dist/ の再生成
 ```
