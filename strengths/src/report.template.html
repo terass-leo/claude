@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>強み診断レポート</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --surface-2: #f3f2ee;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --d1: #2a78d6; --d2: #eb6834; --d3: #1baf7a; --d4: #eda100;   /* 動かす/巻き込む/支える/考え抜く */
+    --pos: #2a78d6; --neg: #e34948; --mid: #f0efec;                 /* 発散配色 */
+    --accent: #2a78d6; --accent-ink: #ffffff;
+    --warn-bg: #fff4e0; --warn-ink: #7a4b00;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232322;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+      --d1: #3987e5; --d2: #d95926; --d3: #199e70; --d4: #c98500;
+      --pos: #3987e5; --neg: #e66767; --mid: #383835;
+      --accent: #3987e5; --accent-ink: #ffffff;
+      --warn-bg: #3a2a08; --warn-ink: #ffd27a;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--page); color: var(--ink);
+    font: 15px/1.7 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  h3 { font-size: 16px; margin: 0 0 8px; }
+  p { margin: 0 0 10px; }
+  .sub { color: var(--ink-2); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; box-shadow: var(--shadow); }
+  .stack > * + * { margin-top: 20px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .grow { flex: 1 1 auto; }
+  button, .btn { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+  button:hover { filter: brightness(0.97); }
+  textarea { width: 100%; min-height: 160px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink); resize: vertical; }
+  input[type=file] { font-size: 13px; }
+  ol.steps { margin: 0 0 12px; padding-left: 20px; }
+  ol.steps li { margin: 2px 0; }
+  .status { font-size: 13px; padding: 8px 12px; border-radius: 8px; background: var(--surface-2); }
+  .status.err { background: var(--warn-bg); color: var(--warn-ink); }
+  .privacy { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-2);
+    background: var(--surface-2); border-radius: 999px; padding: 4px 10px; }
+
+  /* stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .v { font-size: 28px; font-weight: 600; line-height: 1.1; }
+  .tile .l { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+
+  /* tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--grid); }
+  .tabs button { border: 0; background: transparent; border-radius: 8px 8px 0 0; padding: 10px 16px; color: var(--ink-2); }
+  .tabs button[aria-selected=true] { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+
+  /* domain chips */
+  .dom { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+  .dom-1 { background: var(--d1); } .dom-2 { background: var(--d2); } .dom-3 { background: var(--d3); } .dom-4 { background: var(--d4); }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+
+  /* heatmap */
+  .tablewrap { overflow-x: auto; }
+  table.heat { border-collapse: separate; border-spacing: 2px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  table.heat th { font-weight: 500; color: var(--ink-2); text-align: left; padding: 4px 6px; white-space: nowrap; }
+  table.heat thead th.theme { padding: 0; cursor: pointer; height: 124px; width: 34px; position: relative; }
+  table.heat thead th.theme div { position: absolute; left: 50%; bottom: 52px; width: 116px; height: 20px; line-height: 20px;
+    transform: translateX(-50%) rotate(-90deg); white-space: nowrap; font-size: 12px; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+  table.heat thead th.theme:hover { color: var(--ink); }
+  table.heat thead th.theme.on { color: var(--ink); font-weight: 600; }
+  table.heat thead th.domrow { padding: 0; height: 4px; }
+  table.heat thead th.domrow span { display: block; height: 4px; border-radius: 2px; }
+  table.heat td { padding: 0; }
+  table.heat td.cell { width: 34px; height: 30px; border-radius: 4px; text-align: center; color: var(--ink); font-size: 11px; cursor: default; }
+  table.heat td.name { padding: 0 10px 0 6px; white-space: nowrap; }
+  table.heat td.name button { border: 0; background: none; padding: 0; color: var(--ink); font: inherit; text-decoration: underline dotted var(--muted); cursor: pointer; }
+  table.heat td.top5 { padding: 0 8px; color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+  table.heat td.flag { padding: 0 6px; color: var(--warn-ink); font-size: 12px; }
+  .heat-legend { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+  .heat-legend .ramp { width: 140px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--neg), var(--mid), var(--pos)); }
+
+  /* by theme */
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .tcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0; overflow: hidden; }
+  .tcard .bar { height: 5px; }
+  .tcard .body { padding: 14px 16px 16px; }
+  .tcard .def { font-size: 13px; color: var(--ink-2); margin: 4px 0 10px; }
+  .tcard ol { margin: 0; padding-left: 0; list-style: none; }
+  .tcard li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--grid); font-size: 14px; }
+  .tcard li:first-child { border-top: 0; }
+  .rank { font-size: 11px; color: var(--ink-2); background: var(--surface-2); border-radius: 999px; padding: 1px 7px; flex: none; }
+  .zbar { flex: 1 1 auto; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .zbar i { display: block; height: 100%; border-radius: 3px; }
+  .zval { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; width: 40px; text-align: right; }
+
+  /* individual report */
+  .report { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; box-shadow: var(--shadow); }
+  .report header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--grid); padding-bottom: 14px; margin-bottom: 18px; }
+  .report h2 { font-size: 22px; margin: 0; }
+  .report h3 { font-size: 15px; margin: 22px 0 10px; padding-left: 10px; border-left: 3px solid var(--accent); }
+  .lead { font-size: 15px; }
+  .topcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .tc { border: 1px solid var(--grid); border-radius: 10px; padding: 14px 16px; background: var(--surface); }
+  .tc .h { display: flex; align-items: baseline; gap: 10px; }
+  .tc .h .n { font-size: 13px; color: var(--muted); }
+  .tc .h b { font-size: 16px; }
+  .tc .def { font-size: 13px; color: var(--ink-2); margin: 6px 0 8px; }
+  .tc dl { margin: 0; font-size: 13px; }
+  .tc dt { color: var(--muted); font-size: 11px; margin-top: 6px; }
+  .tc dd { margin: 0; }
+  .memo { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .memo .m { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; font-size: 13px; }
+  .memo .m b { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; }
+  .memo ul { margin: 0; padding-left: 18px; }
+  .note { font-size: 12px; color: var(--muted); border-top: 1px solid var(--grid); margin-top: 22px; padding-top: 10px; }
+  .flagnote { background: var(--warn-bg); color: var(--warn-ink); font-size: 13px; padding: 8px 12px; border-radius: 8px; margin: 12px 0 0; }
+  svg.bars text { font: 12px system-ui, sans-serif; fill: var(--ink-2); }
+  svg.bars text.val { fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+  svg.bars line.axis { stroke: var(--axis); stroke-width: 1; }
+  svg.bars line.grid { stroke: var(--grid); stroke-width: 1; }
+  select { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink); }
+
+  #tip { position: fixed; pointer-events: none; background: var(--ink); color: var(--page); font-size: 12px; padding: 6px 9px; border-radius: 6px; z-index: 10; max-width: 280px; line-height: 1.4; }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    main { max-width: none; padding: 0; }
+    .noprint { display: none !important; }
+    .report { border: 0; box-shadow: none; padding: 0; page-break-after: always; break-after: page; }
+    .report:last-child { page-break-after: auto; }
+    .tc, .tcard { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main class="stack">
+  <section class="noprint">
+    <h1>強み診断レポート</h1>
+    <p class="sub">フォームの回答を貼り付けると、その場で全員分の順位・チーム一覧・個人レポートを生成します。</p>
+    <span class="privacy">🔒 データはこのブラウザの中だけで処理され、外部には送信されません</span>
+  </section>
+
+  <section class="card noprint stack" id="input">
+    <div>
+      <h2>1. 回答データを読み込む</h2>
+      <ol class="steps sub">
+        <li>Googleフォームの「回答」タブ → スプレッドシートのアイコンで回答シートを開く</li>
+        <li>シート上で <b>Ctrl+A（Mac は ⌘A）→ Ctrl+C</b> で全体をコピー</li>
+        <li>下の枠に貼り付けて「レポートを作成」。CSVでダウンロードしたファイルを選んでも同じです</li>
+      </ol>
+      <textarea id="src" placeholder="ここに回答シートの内容を貼り付け（1行目が設問文になっているもの）"></textarea>
+    </div>
+    <div class="row">
+      <button class="primary" id="run">レポートを作成</button>
+      <input type="file" id="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values">
+      <span class="grow"></span>
+      <button id="sample">サンプルデータで試す</button>
+    </div>
+    <div id="status" class="status" hidden></div>
+  </section>
+
+  <section id="results" class="stack" hidden>
+    <div class="tiles noprint" id="tiles"></div>
+
+    <div class="tabs noprint" role="tablist">
+      <button role="tab" data-tab="team" aria-selected="true">チーム一覧</button>
+      <button role="tab" data-tab="theme" aria-selected="false">テーマ別の上位者</button>
+      <button role="tab" data-tab="person" aria-selected="false">個人レポート</button>
+    </div>
+
+    <div id="tab-team" class="card stack">
+      <div class="row noprint">
+        <h2 class="grow" style="margin:0">12テーマ × 全員</h2>
+        <label class="muted"><input type="radio" name="mode" value="personal" checked> 個人内の相対順位</label>
+        <label class="muted" id="cohort-label"><input type="radio" name="mode" value="cohort"> 全社との比較</label>
+        <label class="muted"><input type="checkbox" id="shownum"> 数値を表示</label>
+        <button id="export">結果をCSVで保存</button>
+      </div>
+      <p class="muted" id="team-help"></p>
+      <div class="tablewrap" id="heat"></div>
+      <div class="row">
+        <div class="heat-legend"><span>低い</span><span class="ramp"></span><span>高い</span></div>
+        <span class="grow"></span>
+        <div class="legend" id="legend-team"></div>
+      </div>
+    </div>
+
+    <div id="tab-theme" class="stack" hidden>
+      <p class="muted">各テーマを<b>自分の上位5</b>に持つ人を、相対スコアの高い順に並べています。「この仕事、誰に任せるか」を考えるときの一次候補リストです。薄く表示されている人は、上位5に入っていても本人平均を上回っていない（差が小さい）ことを示します。⚠ は回答品質に注記がある人です。</p>
+      <div class="grid3" id="bytheme"></div>
+    </div>
+
+    <div id="tab-person" class="stack" hidden>
+      <div class="row noprint">
+        <select id="who"></select>
+        <button id="print">このレポートを印刷 / PDF保存</button>
+        <span class="grow"></span>
+        <label class="muted"><input type="checkbox" id="all"> 全員分をまとめて表示（一括印刷用）</label>
+      </div>
+      <div id="reports" class="stack"></div>
+    </div>
+  </section>
+
+  <footer class="muted noprint">
+    この診断は自己申告アンケートに基づく相対的な傾向を示すもので、能力の優劣や人事評価・選考の判断材料ではありません。育成・1on1・業務アサインの参考としてご利用ください。
+  </footer>
+</main>
+<div id="tip" hidden></div>
+
+<script>
+/*__DATA__*/
+</script>
+<script>
+/*__SCORING__*/
+</script>
+<script>
+/*__CSV__*/
+</script>
+<script>
+/*__SAMPLE__*/
+</script>
+<script>
+(function () {
+  'use strict';
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmt = (z) => (z >= 0 ? '+' : '') + z.toFixed(2);
+
+  const DOMAIN_INDEX = {};
+  DOMAINS.forEach((d, i) => { DOMAIN_INDEX[d.name] = i + 1; });
+  const domClass = (domain) => `dom-${DOMAIN_INDEX[domain] || 1}`;
+  const domVar = (domain) => `var(--d${DOMAIN_INDEX[domain] || 1})`;
+
+  const state = { data: null, mode: 'personal', sortKey: null, sortDir: -1, showNum: false, who: 0, all: false };
+
+  // ---------- 入力 ----------
+  function setStatus(msg, isErr) {
+    const el = $('#status');
+    el.hidden = !msg;
+    el.textContent = msg || '';
+    el.classList.toggle('err', !!isErr);
+  }
+
+  function run(text) {
+    try {
+      const rows = parseDelimited(text);
+      const data = scoreTable(rows);
+      state.data = data;
+      state.who = 0;
+      state.sortKey = null;
+      const parts = [`${data.people.length}人分を読み込みました（設問 ${data.matchedItems}/${ITEMS.length} 列を認識）。`];
+      if (data.missingItems.length) parts.push(`⚠ 見出しに見つからなかった設問が${data.missingItems.length}問あります。該当テーマの精度が下がります。`);
+      if (data.duplicates.length) parts.push(`同じ氏名の回答が複数あったため、最後の回答を採用: ${data.duplicates.join('、')}`);
+      setStatus(parts.join(' '), data.missingItems.length > 0);
+      $('#results').hidden = false;
+      renderAll();
+      $('#results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      setStatus(`読み込めませんでした: ${err.message}`, true);
+      $('#results').hidden = true;
+    }
+  }
+
+  $('#run').addEventListener('click', () => run($('#src').value));
+  $('#sample').addEventListener('click', () => { $('#src').value = SAMPLE_TSV; run(SAMPLE_TSV); });
+  $('#file').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => { $('#src').value = reader.result; run(reader.result); };
+    reader.readAsText(f, 'utf-8');
+  });
+
+  // ---------- タブ ----------
+  $$('.tabs [role=tab]').forEach((b) => b.addEventListener('click', () => {
+    $$('.tabs [role=tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+    ['team', 'theme', 'person'].forEach((k) => { $(`#tab-${k}`).hidden = (b.dataset.tab !== k); });
+  }));
+
+  // ---------- ツールチップ ----------
+  const tip = $('#tip');
+  document.addEventListener('mouseover', (e) => {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.hidden = true; return; }
+    tip.textContent = t.dataset.tip;
+    tip.hidden = false;
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (tip.hidden) return;
+    const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+    const y = Math.min(e.clientY + 14, window.innerHeight - tip.offsetHeight - 8);
+    tip.style.left = `${x}px`;
+    tip.style.top = `${y}px`;
+  });
+
+  // ---------- 描画 ----------
+  function renderAll() {
+    renderTiles();
+    renderTeam();
+    renderByTheme();
+    renderPersonControls();
+    renderReports();
+  }
+
+  function renderTiles() {
+    const d = state.data;
+    const flagged = d.people.filter((p) => p.result.flags.length).length;
+    $('#tiles').innerHTML = [
+      ['回答者', `${d.people.length}<span class="muted">人</span>`],
+      ['回答品質に注記あり', `${flagged}<span class="muted">人</span>`],
+      ['全社比較', d.cohortEnabled ? '有効' : `<span class="muted" style="font-size:16px">${SCORING.NORM_MIN_N}人以上で有効</span>`],
+      ['測定テーマ', `${THEMES.length}<span class="muted">テーマ / ${ITEMS.length}問</span>`],
+    ].map(([l, v]) => `<div class="tile"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+    $('#cohort-label').style.opacity = d.cohortEnabled ? 1 : 0.4;
+    $('#cohort-label input').disabled = !d.cohortEnabled;
+    if (!d.cohortEnabled) { state.mode = 'personal'; $('input[name=mode][value=personal]').checked = true; }
+  }
+
+  function zOf(p, themeId) {
+    return state.mode === 'cohort' && p.cohortZ ? p.cohortZ[themeId] : p.result.themeZ[themeId];
+  }
+
+  /** 発散配色: z ∈ [-2, 2] を 赤 ← グレー → 青 に写す */
+  function heatColor(z) {
+    const t = Math.max(-1, Math.min(1, z / 2));
+    const pole = t >= 0 ? 'var(--pos)' : 'var(--neg)';
+    const pct = Math.round(Math.abs(t) * 85);
+    return `color-mix(in oklab, ${pole} ${pct}%, var(--mid))`;
+  }
+
+  function sortedPeople() {
+    const people = state.data.people.slice();
+    if (!state.sortKey) return people;
+    if (state.sortKey === 'name') return people.sort((a, b) => a.name.localeCompare(b.name, 'ja') * -state.sortDir);
+    return people.sort((a, b) => (zOf(b, state.sortKey) - zOf(a, state.sortKey)) * -state.sortDir);
+  }
+
+  function renderTeam() {
+    const people = sortedPeople();
+    $('#team-help').textContent = state.mode === 'cohort'
+      ? '全社の平均を0としたときの位置。青いほど社内で相対的に高く、赤いほど低い。テーマ名をクリックすると並べ替え。'
+      : '本人の中での相対順位（個人内Z）。青いほどその人の中で優先度が高い資質、赤いほど控えめな資質。人と人を比べる指標ではありません。テーマ名をクリックすると並べ替え。';
+
+    const domRow = THEMES.map((t) => `<th class="domrow"><span style="background:${domVar(t.domain)}"></span></th>`).join('');
+    const head = THEMES.map((t) => `<th class="theme${state.sortKey === t.id ? ' on' : ''}" data-sort="${t.id}" data-tip="${esc(t.definition)}"><div>${esc(t.name)}</div></th>`).join('');
+    const body = people.map((p, i) => {
+      const cells = THEMES.map((t) => {
+        const z = zOf(p, t.id);
+        const r = p.result.ranking.find((x) => x.themeId === t.id);
+        const tipText = `${p.name} × ${t.name}\n${state.mode === 'cohort' ? '全社比較' : '個人内'}Z ${fmt(z)}　本人内順位 ${r ? r.rank : '-'}位`;
+        return `<td class="cell" style="background:${heatColor(z)}" data-tip="${esc(tipText)}">${state.showNum ? fmt(z) : ''}</td>`;
+      }).join('');
+      const idx = state.data.people.indexOf(p);
+      return `<tr>
+        <td class="name"><button data-person="${idx}">${esc(p.name)}</button></td>
+        ${cells}
+        <td class="top5">${esc(p.result.top.map((x) => x.name).join('・'))}</td>
+        <td class="flag" ${p.result.flags.length ? `data-tip="${esc(p.result.flags.join(' / '))}"` : ''}>${p.result.flags.length ? '⚠' : ''}</td>
+      </tr>`;
+    }).join('');
+
+    $('#heat').innerHTML = `<table class="heat">
+      <thead>
+        <tr><th></th>${domRow}<th></th><th></th></tr>
+        <tr><th data-sort="name" style="cursor:pointer">氏名${state.sortKey === 'name' ? ' ▾' : ''}</th>${head}<th>上位${SCORING.TOP_N}</th><th></th></tr>
+      </thead>
+      <tbody>${body}</tbody></table>`;
+
+    $('#legend-team').innerHTML = DOMAINS.map((d) => `<span class="dom"><i class="dot ${domClass(d.name)}"></i>${esc(d.name)}</span>`).join('');
+
+    $$('#heat [data-sort]').forEach((th) => th.addEventListener('click', () => {
+      const k = th.dataset.sort;
+      if (state.sortKey === k) state.sortDir = -state.sortDir; else { state.sortKey = k; state.sortDir = -1; }
+      renderTeam();
+    }));
+    $$('#heat [data-person]').forEach((b) => b.addEventListener('click', () => {
+      state.who = Number(b.dataset.person);
+      state.all = false; $('#all').checked = false;
+      $('#who').value = String(state.who);
+      renderReports();
+      $('.tabs [data-tab=person]').click();
+    }));
+  }
+
+  $$('input[name=mode]').forEach((r) => r.addEventListener('change', (e) => { state.mode = e.target.value; renderTeam(); }));
+  $('#shownum').addEventListener('change', (e) => { state.showNum = e.target.checked; renderTeam(); });
+
+  function renderByTheme() {
+    const people = state.data.people;
+    $('#bytheme').innerHTML = THEMES.map((t) => {
+      const holders = people
+        .map((p) => ({ p, r: p.result.ranking.find((x) => x.themeId === t.id) }))
+        .filter((x) => x.r && x.r.rank <= SCORING.TOP_N)
+        .sort((a, b) => b.r.z - a.r.z);
+      const maxZ = Math.max(1, ...holders.map((h) => h.r.z));
+      const list = holders.length
+        ? holders.map((h) => {
+          const weak = h.r.z <= 0;
+          const flagged = h.p.result.flags.length > 0;
+          return `<li style="${weak ? 'opacity:.55' : ''}">
+            <span class="rank">${h.r.rank}位</span>
+            <span style="min-width:6em">${esc(h.p.name)}${flagged ? ` <span data-tip="${esc(h.p.result.flags.join(' / '))}">⚠</span>` : ''}</span>
+            <span class="zbar"><i style="width:${Math.max(0, Math.round(h.r.z / maxZ * 100))}%;background:${domVar(t.domain)}"></i></span>
+            <span class="zval">${fmt(h.r.z)}</span></li>`;
+        }).join('')
+        : '<li class="muted">上位に持つ人はいません</li>';
+      return `<div class="tcard">
+        <div class="bar" style="background:${domVar(t.domain)}"></div>
+        <div class="body">
+          <div class="row" style="justify-content:space-between"><h3 style="margin:0">${esc(t.name)}</h3><span class="dom"><i class="dot ${domClass(t.domain)}"></i>${esc(t.domain)}</span></div>
+          <div class="def">${esc(t.definition)}</div>
+          <ol>${list}</ol>
+          <div class="muted" style="margin-top:8px">向く仕事の型: ${esc(t.fit.join(' / '))}</div>
+        </div></div>`;
+    }).join('');
+  }
+
+  function renderPersonControls() {
+    $('#who').innerHTML = state.data.people.map((p, i) => `<option value="${i}">${esc(p.name)}${p.dept ? `（${esc(p.dept)}）` : ''}</option>`).join('');
+    $('#who').value = String(state.who);
+  }
+  $('#who').addEventListener('change', (e) => { state.who = Number(e.target.value); renderReports(); });
+  $('#all').addEventListener('change', (e) => { state.all = e.target.checked; renderReports(); });
+  $('#print').addEventListener('click', () => { $('.tabs [data-tab=person]').click(); window.print(); });
+
+  function renderReports() {
+    const people = state.all ? state.data.people : [state.data.people[state.who]];
+    $('#reports').innerHTML = people.map(reportHTML).join('');
+  }
+
+  /** 上位5の領域構成から総括の一文を作る */
+  function summarySentence(p) {
+    if (p.result.ranking.every((r) => r.z === 0)) {
+      return 'テーマ間に差がつかず、順位を確定できませんでした。同じ選択肢が続いた可能性があります。以下の順位は仮のものとして扱い、再回答か本人との対話で確かめてください。';
+    }
+    const counts = {};
+    p.result.top.forEach((r) => { counts[r.domain] = (counts[r.domain] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const dom = (n) => DOMAINS.find((d) => d.name === n);
+    const names = p.result.top.map((r) => r.name).join('・');
+    if (sorted[0][1] >= 3) {
+      return `上位は ${names}。「${sorted[0][0]}」の資質が上位を占めており、${dom(sorted[0][0]).summary}タイプです。`;
+    }
+    if (sorted.length >= 2 && sorted[0][1] === 2 && sorted[1][1] === 2) {
+      return `上位は ${names}。「${sorted[0][0]}」と「${sorted[1][0]}」を掛け合わせて動くのが持ち味で、${dom(sorted[0][0]).summary}一方、${dom(sorted[1][0]).summary}面も併せ持ちます。`;
+    }
+    return `上位は ${names}。領域をまたいで強みが分散しており、状況に応じて持ち味を切り替えられるタイプです。`;
+  }
+
+  function barsSVG(p) {
+    const W = 720, rowH = 26, left = 150, right = 60, top = 8;
+    const H = top + THEMES.length * rowH + 20;
+    const plotW = W - left - right;
+    const maxAbs = Math.max(1.5, ...p.result.ranking.map((r) => Math.abs(r.z)));
+    const x0 = left + plotW / 2;
+    const scale = (plotW / 2 - 6) / maxAbs;
+    const ticks = [-1, 1].filter((v) => v < maxAbs);
+    let s = `<svg class="bars" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="12テーマの相対スコア">`;
+    ticks.forEach((v) => { s += `<line class="grid" x1="${x0 + v * scale}" x2="${x0 + v * scale}" y1="${top}" y2="${H - 16}"/>`; });
+    s += `<line class="axis" x1="${x0}" x2="${x0}" y1="${top}" y2="${H - 16}"/>`;
+    p.result.ranking.forEach((r, i) => {
+      const y = top + i * rowH;
+      const w = Math.abs(r.z) * scale;
+      const x = r.z >= 0 ? x0 + 1 : x0 - w - 1;
+      const rx = 4;
+      s += `<text x="${left - 10}" y="${y + rowH / 2 + 4}" text-anchor="end">${esc(r.rank)}位 ${esc(r.name)}</text>`;
+      s += `<circle cx="${left - 4}" cy="${y + rowH / 2}" r="3" fill="${domVar(r.domain)}"/>`;
+      s += `<rect x="${x}" y="${y + 6}" width="${Math.max(w, 1)}" height="${rowH - 12}" rx="${rx}" fill="${domVar(r.domain)}" data-tip="${esc(`${r.name}: 個人内Z ${fmt(r.z)}（素点 ${r.score.toFixed(2)}）`)}"/>`;
+      s += `<text class="val" x="${r.z >= 0 ? x + w + 6 : x - 6}" y="${y + rowH / 2 + 4}" text-anchor="${r.z >= 0 ? 'start' : 'end'}">${fmt(r.z)}</text>`;
+    });
+    ticks.concat([0]).forEach((v) => { s += `<text x="${x0 + v * scale}" y="${H - 2}" text-anchor="middle" style="font-size:11px">${v === 0 ? '本人平均' : fmt(v)}</text>`; });
+    s += '</svg>';
+    return s;
+  }
+
+  function uniq(arr) { return arr.filter((v, i) => arr.indexOf(v) === i); }
+
+  function reportHTML(p) {
+    const r = p.result;
+    const top = r.top.map((x) => getTheme(x.themeId));
+    const bottom = r.bottom.map((x) => getTheme(x.themeId));
+    const topCards = r.top.map((x, i) => {
+      const t = getTheme(x.themeId);
+      return `<div class="tc">
+        <div class="h"><span class="n">${i + 1}位</span><b>${esc(t.name)}</b><span class="dom"><i class="dot ${domClass(t.domain)}"></i>${esc(t.domain)}</span></div>
+        <div class="def">${esc(t.definition)}</div>
+        <dl>
+          <dt>こう現れやすい</dt><dd>${esc(t.behaviors.join('。'))}。</dd>
+          <dt>活かしどころ</dt><dd>${esc(t.fit.join(' / '))}</dd>
+          <dt>出すぎたときの注意</dt><dd>${esc(t.overuse.join(' / '))}</dd>
+        </dl></div>`;
+    }).join('');
+
+    const lowText = bottom.map((t) => `<li><b>${esc(t.name)}</b> — 本人の中では優先度が低め。${esc(t.fit[0])}のような場面は、この資質を上位に持つメンバーと組むか、仕組みで補う設計にすると安定します。</li>`).join('');
+
+    const grow = uniq(top.slice(0, 3).flatMap((t) => t.fit)).slice(0, 5);
+    const caution = top.slice(0, 2).map((t) => `${t.name}: ${t.overuse[0]}`);
+    const complement = uniq(bottom.slice(0, 2).flatMap((t) => t.fit)).slice(0, 3);
+    const probes = top.slice(0, 2).map((t) => t.probe);
+
+    return `<article class="report">
+      <header>
+        <div><h2>${esc(p.name)} さん 強み診断レポート</h2>
+          <div class="sub">${esc(p.dept || '')}${p.dept && p.timestamp ? '　' : ''}${p.timestamp ? `回答日 ${esc(p.timestamp)}` : ''}</div></div>
+        <div class="legend">${DOMAINS.map((d) => `<span class="dom"><i class="dot ${domClass(d.name)}"></i>${esc(d.name)}</span>`).join('')}</div>
+      </header>
+      <p class="lead">${esc(summarySentence(p))}</p>
+      ${r.flags.length ? `<p class="flagnote">回答傾向への注記: ${esc(r.flags.join(' / '))}。結果は参考程度に読み、本人との対話で確かめてください。</p>` : ''}
+
+      <h3>12テーマの相対スコア</h3>
+      ${barsSVG(p)}
+      <p class="muted">本人の12テーマ平均を0としたときの位置（個人内Z）。右に出ているほど、その人の中で自然に発揮されやすい資質です。人との比較ではありません。</p>
+
+      <h3>強み トップ${SCORING.TOP_N}</h3>
+      <div class="topcards">${topCards}</div>
+
+      <h3>相対的に控えめな面との付き合い方</h3>
+      <ul style="margin:0;padding-left:20px;font-size:14px">${lowText}</ul>
+
+      <h3>アサイン担当者向けメモ</h3>
+      <div class="memo">
+        <div class="m"><b>任せると伸びやすい仕事の型</b><ul>${grow.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>
+        <div class="m"><b>他メンバーで補いたい場面</b><ul>${complement.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>
+        <div class="m"><b>出すぎに気をつけたい点</b><ul>${caution.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>
+        <div class="m"><b>1on1で確かめたい問い</b><ul>${probes.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>
+      </div>
+
+      <p class="note">この結果は自己申告アンケートに基づく相対的な傾向であり、能力の優劣や人事評価・選考の判断材料ではありません。育成・1on1・業務アサインの参考としてご利用ください。</p>
+    </article>`;
+  }
+
+  // ---------- CSV書き出し ----------
+  $('#export').addEventListener('click', () => {
+    const d = state.data;
+    const head = ['氏名', '部署・チーム', '回答日'].concat(THEMES.map((t) => `${t.name}_素点`)).concat(THEMES.map((t) => `${t.name}_個人内Z`))
+      .concat(d.cohortEnabled ? THEMES.map((t) => `${t.name}_全社Z`) : []).concat(['順位(1位→12位)', `上位${SCORING.TOP_N}`, '回答品質']);
+    const lines = d.people.map((p) => [p.name, p.dept, p.timestamp]
+      .concat(THEMES.map((t) => round2_(p.result.themeScores[t.id])))
+      .concat(THEMES.map((t) => round2_(p.result.themeZ[t.id])))
+      .concat(d.cohortEnabled ? THEMES.map((t) => round2_(p.cohortZ[t.id])) : [])
+      .concat([p.result.ranking.map((x) => x.name).join(' > '), p.result.top.map((x) => x.name).join('、'), p.result.flags.join(' / ')]));
+    const csv = [head].concat(lines).map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `強み診断_結果_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+})();
+</script>
+</body>
+</html>
